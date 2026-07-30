@@ -4,6 +4,9 @@
   "Punchline": "Practice your Rotations and Openers.",
   "Description": "A training overlay for practicing openers, rotations, etc.",
   "ApplicableVersion": "any",
+  "RepoUrl": "https://github.com/ShoValentine/KupoCombo",
+  "IconUrl": "https://raw.githubusercontent.com/ShoValentine/KupoCombo/master/Data/kupocombo.png"
+}
   "Tags": [
     "practice",
     "rotation",
