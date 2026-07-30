@@ -5,7 +5,7 @@
   "Description": "A training overlay for practicing openers, rotations, and combat sequences.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/ShoValentine/KupoCombo",
-  "IconUrl": "https://raw.githubusercontent.com/ShoValentine/KupoCombo/master/Data/kupocombo.png",
+  "IconUrl": "https://raw.githubusercontent.com/ShoValentine/KupoCombo/master/Data/kupoicon.png",
   "Tags": [
     "practice",
     "rotation",
