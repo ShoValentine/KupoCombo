@@ -1,12 +1,11 @@
 {
   "Author": "Sho Valentine",
   "Name": "KupoCombo",
-  "Punchline": "Practice your Rotations and Openers.",
-  "Description": "A training overlay for practicing openers, rotations, etc.",
+  "Punchline": "Practice your rotations and openers.",
+  "Description": "A training overlay for practicing openers, rotations, and combat sequences.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/ShoValentine/KupoCombo",
-  "IconUrl": "https://raw.githubusercontent.com/ShoValentine/KupoCombo/master/Data/kupocombo.png"
-}
+  "IconUrl": "https://raw.githubusercontent.com/ShoValentine/KupoCombo/master/Data/kupocombo.png",
   "Tags": [
     "practice",
     "rotation",
