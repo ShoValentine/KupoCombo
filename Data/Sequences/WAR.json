@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "war-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "WAR",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        31,
+        37,
+        42
+      ]
+    },
+    {
+      "id": "war-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "WAR",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        31,
+        37,
+        42
+      ]
+    }
+  ]
+}

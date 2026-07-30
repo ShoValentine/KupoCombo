@@ -9,7 +9,6 @@ namespace KupoCombo.Windows;
 public sealed class MainWindow : Window, IDisposable
 {
     private readonly Plugin plugin;
-    private readonly string[] sequenceLabels;
 
     private int selectedSequence;
 
@@ -17,10 +16,6 @@ public sealed class MainWindow : Window, IDisposable
         : base("KupoCombo Control##KupoComboControl")
     {
         this.plugin = plugin;
-
-        sequenceLabels = plugin.Sequences
-            .Select(sequence => sequence.DisplayName)
-            .ToArray();
 
         SizeConstraints = new WindowSizeConstraints
         {
@@ -36,13 +31,22 @@ public sealed class MainWindow : Window, IDisposable
     public override void Draw()
     {
         ImGui.Text("Practice sequence");
+        var currentJob =
+    string.IsNullOrWhiteSpace(plugin.CurrentJob)
+        ? "Unavailable"
+        : plugin.CurrentJob;
+
+        ImGui.TextDisabled(
+            $"Current job: {currentJob}");
+
+        ImGui.Spacing();
 
         if (plugin.Sequences.Count == 0)
         {
             ImGui.Spacing();
 
             ImGui.TextWrapped(
-                "No sequence definitions were loaded. " +
+                "No sequence data found for current job. " +
                 "Check Sequences.json and the Dalamud log for errors.");
 
             ImGui.Spacing();
@@ -59,6 +63,12 @@ public sealed class MainWindow : Window, IDisposable
         {
             selectedSequence = 0;
         }
+
+
+
+        var sequenceLabels = plugin.Sequences
+    .Select(sequence => sequence.DisplayName)
+    .ToArray();
 
         ImGui.SetNextItemWidth(-1);
 

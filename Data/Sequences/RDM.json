@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "rdm-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "RDM",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        7524
+      ]
+    },
+    {
+      "id": "rdm-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "RDM",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        7524
+      ]
+    }
+  ]
+}

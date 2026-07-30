@@ -1,17 +1,21 @@
-using Dalamud.Configuration;
 using System;
+using Dalamud.Configuration;
 
 namespace KupoCombo;
 
 [Serializable]
-public class Configuration : IPluginConfiguration
+public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 0;
+    public int Version { get; set; } = 1;
 
-    public bool IsConfigWindowMovable { get; set; } = true;
-    public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
+    public float OverlayIconScale { get; set; } = 1.0f;
 
-    // The below exists just to make saving less cumbersome
+    public float OverlayTextScale { get; set; } = 1.0f;
+
+    public bool OverlayTransparent { get; set; } = true;
+
+    public float OverlayIconSpacing { get; set; } = 12.0f;
+
     public void Save()
     {
         Plugin.PluginInterface.SavePluginConfig(this);

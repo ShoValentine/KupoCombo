@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "nin-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "NIN",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        2240,
+        2242,
+        2255
+      ]
+    },
+    {
+      "id": "nin-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "NIN",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        2240,
+        2242,
+        2255
+      ]
+    }
+  ]
+}

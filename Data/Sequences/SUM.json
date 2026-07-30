@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "war-test",
+      "name": "Combo Coming Soon...",
+      "job": "WAR",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": []
+    }
+  ]
+}

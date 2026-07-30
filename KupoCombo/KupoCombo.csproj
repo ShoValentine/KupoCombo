@@ -9,7 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\Data\sequences.json">
+  <Content Include="..\Data\Sequences\*.json">
+    <Link>Sequences\%(Filename)%(Extension)</Link>
+    <TargetPath>Sequences\%(Filename)%(Extension)</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "ast-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "AST",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        25871
+      ]
+    },
+    {
+      "id": "ast-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "AST",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        25871
+      ]
+    }
+  ]
+}

@@ -16,7 +16,9 @@ public static class SequenceLoader
         AllowTrailingCommas = true
     };
 
-    public static IReadOnlyList<SequenceDefinition> Load(string filePath)
+    public static IReadOnlyList<SequenceDefinition> Load(
+        string filePath,
+        string expectedJob)
     {
         if (!File.Exists(filePath))
         {
@@ -28,9 +30,11 @@ public static class SequenceLoader
         var json = File.ReadAllText(filePath);
 
         var sequenceFile =
-            JsonSerializer.Deserialize<SequenceFile>(json, JsonOptions)
+            JsonSerializer.Deserialize<SequenceFile>(
+                json,
+                JsonOptions)
             ?? throw new InvalidDataException(
-                "Sequences.json could not be deserialized.");
+                $"{Path.GetFileName(filePath)} could not be deserialized.");
 
         if (sequenceFile.SchemaVersion != 1)
         {
@@ -39,20 +43,17 @@ public static class SequenceLoader
                 $"{sequenceFile.SchemaVersion}");
         }
 
-        ValidateSequences(sequenceFile.Sequences);
+        ValidateSequences(
+            sequenceFile.Sequences,
+            expectedJob);
 
         return sequenceFile.Sequences;
     }
 
     private static void ValidateSequences(
-        IReadOnlyCollection<SequenceDefinition> sequences)
+        IReadOnlyCollection<SequenceDefinition> sequences,
+        string expectedJob)
     {
-        if (sequences.Count == 0)
-        {
-            throw new InvalidDataException(
-                "Sequences.json does not contain any sequences.");
-        }
-
         var duplicateId = sequences
             .GroupBy(sequence => sequence.Id)
             .FirstOrDefault(group => group.Count() > 1);
@@ -83,13 +84,24 @@ public static class SequenceLoader
                     $"Sequence '{sequence.Id}' is missing its job.");
             }
 
+            if (!sequence.Job.Equals(
+                    expectedJob,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    $"Sequence '{sequence.Id}' belongs to " +
+                    $"'{sequence.Job}', but it was found inside " +
+                    $"'{expectedJob}.json'.");
+            }
+
             if (sequence.Actions.Count == 0)
             {
                 throw new InvalidDataException(
                     $"Sequence '{sequence.Id}' contains no actions.");
             }
 
-            if (sequence.Actions.Any(actionId => actionId == 0))
+            if (sequence.Actions.Any(
+                    actionId => actionId == 0))
             {
                 throw new InvalidDataException(
                     $"Sequence '{sequence.Id}' contains action ID 0.");

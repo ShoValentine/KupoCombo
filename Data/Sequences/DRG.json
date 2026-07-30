@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "drg-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "DRG",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        75,
+        78,
+        25771
+      ]
+    },
+    {
+      "id": "drg-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "DRG",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        75,
+        78,
+        25771
+      ]
+    }
+  ]
+}

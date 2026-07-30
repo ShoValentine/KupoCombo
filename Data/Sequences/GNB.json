@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "gnb-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "GNB",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        16137,
+        16139,
+        16145
+      ]
+    },
+    {
+      "id": "gnb-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "GNB",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        16137,
+        16139,
+        16145
+      ]
+    }
+  ]
+}

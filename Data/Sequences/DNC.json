@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "dnc-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "DNC",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        15989,
+        15990
+      ]
+    },
+    {
+      "id": "dnc-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "DNC",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        15989,
+        15990
+      ]
+    }
+  ]
+}

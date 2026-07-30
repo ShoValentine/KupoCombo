@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "vpr-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "VPR",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        34606,
+        34608,
+        34610
+      ]
+    },
+    {
+      "id": "vpr-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "VPR",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        34606,
+        34608,
+        34610
+      ]
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "rpr-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "RPR",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        24373,
+        24374,
+        24375
+      ]
+    },
+    {
+      "id": "rpr-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "RPR",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        24373,
+        24374,
+        24375
+      ]
+    }
+  ]
+}

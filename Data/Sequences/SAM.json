@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "sam-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "SAM",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        7477,
+        7478,
+        7481
+      ]
+    },
+    {
+      "id": "sam-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "SAM",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        7477,
+        7478,
+        7481
+      ]
+    }
+  ]
+}

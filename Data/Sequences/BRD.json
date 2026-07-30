@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "brd-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "BRD",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        16495
+      ]
+    },
+    {
+      "id": "brd-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "BRD",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        16495
+      ]
+    }
+  ]
+}

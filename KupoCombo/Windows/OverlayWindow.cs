@@ -17,27 +17,94 @@ public sealed class OverlayWindow : Window, IDisposable
 
     private readonly Plugin plugin;
 
+    private bool transparentStylesPushed;
+
     public OverlayWindow(Plugin plugin)
         : base(
-            "KupoCombo Overlay##KupoComboOverlay",
-            ImGuiWindowFlags.NoDecoration |
-            ImGuiWindowFlags.AlwaysAutoResize |
-            ImGuiWindowFlags.NoSavedSettings |
+            "KupoCombo Overlay###KupoComboOverlay",
+            ImGuiWindowFlags.NoTitleBar |
+            ImGuiWindowFlags.NoCollapse |
+            ImGuiWindowFlags.NoScrollbar |
+            ImGuiWindowFlags.NoScrollWithMouse |
             ImGuiWindowFlags.NoFocusOnAppearing |
             ImGuiWindowFlags.NoNavInputs |
             ImGuiWindowFlags.NoNavFocus)
     {
         this.plugin = plugin;
+
         IsOpen = false;
+
+        ShowCloseButton = false;
+        AllowPinning = false;
+
+        Size = new Vector2(650, 240);
+        SizeCondition = ImGuiCond.FirstUseEver;
+
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(220, 120),
+            MaximumSize = new Vector2(
+                float.MaxValue,
+                float.MaxValue)
+        };
     }
 
     public void Dispose()
     {
     }
 
+    public override void PreDraw()
+    {
+        transparentStylesPushed = false;
+
+        if (plugin.Configuration.OverlayTransparent)
+        {
+            Flags |= ImGuiWindowFlags.NoBackground;
+
+            BgAlpha = 0f;
+
+            ImGui.PushStyleColor(
+                ImGuiCol.ResizeGrip,
+                Vector4.Zero);
+
+            ImGui.PushStyleColor(
+                ImGuiCol.ResizeGripHovered,
+                Vector4.Zero);
+
+            ImGui.PushStyleColor(
+                ImGuiCol.ResizeGripActive,
+                Vector4.Zero);
+
+            transparentStylesPushed = true;
+        }
+        else
+        {
+            Flags &= ~ImGuiWindowFlags.NoBackground;
+
+            BgAlpha = null;
+        }
+    }
+
+    public override void PostDraw()
+    {
+        if (transparentStylesPushed)
+        {
+            ImGui.PopStyleColor(3);
+        }
+    }
+
     public override void Draw()
     {
-        var selectedSequence = plugin.SelectedSequence;
+        var textScale =
+            Math.Clamp(
+                plugin.Configuration.OverlayTextScale,
+                0.5f,
+                2.0f);
+
+        ImGui.SetWindowFontScale(textScale);
+
+        var selectedSequence =
+            plugin.SelectedSequence;
 
         if (selectedSequence == null)
         {
@@ -48,25 +115,143 @@ public sealed class OverlayWindow : Window, IDisposable
         ImGui.Text(selectedSequence.DisplayName);
         ImGui.Spacing();
 
-        var scale = ImGuiHelpers.GlobalScale;
+        DrawActionGrid(
+            selectedSequence.Actions);
+    }
 
-        var iconSize = new Vector2(
-            BaseIconSize * scale,
-            BaseIconSize * scale);
+    private void DrawActionGrid(
+        IReadOnlyList<uint> actions)
+    {
+        var globalScale =
+            ImGuiHelpers.GlobalScale;
 
-        var cellWidth = BaseCellWidth * scale;
+        var iconScale =
+            Math.Clamp(
+                plugin.Configuration.OverlayIconScale,
+                0.5f,
+                2.0f);
+
+        var textScale =
+            Math.Clamp(
+                plugin.Configuration.OverlayTextScale,
+                0.5f,
+                2.0f);
+
+        var configuredSpacing =
+            Math.Clamp(
+                plugin.Configuration.OverlayIconSpacing,
+                -60f,
+                60f);
+
+        var iconSpacing =
+            configuredSpacing *
+            globalScale;
+
+        var iconLength =
+            BaseIconSize *
+            globalScale *
+            iconScale;
+
+        var iconSize =
+            new Vector2(
+                iconLength,
+                iconLength);
+
+        var iconBasedCellWidth =
+            BaseCellWidth *
+            globalScale *
+            iconScale;
+
+        var textBasedCellWidth =
+            BaseCellWidth *
+            globalScale *
+            textScale;
+
+        var cellWidth =
+            Math.Max(
+                iconBasedCellWidth,
+                textBasedCellWidth);
+
+        var availableWidth =
+            Math.Max(
+                1f,
+                ImGui.GetContentRegionAvail().X);
+
+        /*
+         * The distance between the start of one cell
+         * and the start of the next.
+         *
+         * Negative spacing now reduces this distance,
+         * allowing cells and icons to overlap.
+         */
+        var horizontalAdvance =
+            Math.Max(
+                1f,
+                cellWidth + iconSpacing);
+
+        var remainingWidth =
+            Math.Max(
+                0f,
+                availableWidth - cellWidth);
+
+        var itemsPerRow =
+            Math.Max(
+                1,
+                1 +
+                (int)Math.Floor(
+                    remainingWidth /
+                    horizontalAdvance));
+
+        var labelHeight =
+            ImGui.GetTextLineHeight();
+
+        var cellHeight =
+            iconSize.Y +
+            ImGui.GetStyle().ItemSpacing.Y +
+            labelHeight;
+
+        /*
+         * Keep wrapped rows readable.
+         * Negative icon spacing only overlaps horizontally.
+         */
+        var verticalSpacing =
+            Math.Max(
+                0f,
+                iconSpacing);
+
+        var verticalAdvance =
+            cellHeight +
+            verticalSpacing;
+
+        var gridStartX =
+            ImGui.GetCursorPosX();
+
+        var gridStartY =
+            ImGui.GetCursorPosY();
 
         for (var step = 0;
-             step < selectedSequence.Actions.Count;
+             step < actions.Count;
              step++)
         {
-            if (step > 0)
-            {
-                ImGui.SameLine();
-            }
+            var column =
+                step % itemsPerRow;
 
-            var actionId = selectedSequence.Actions[step];
-            var stepCompleted = step < plugin.CurrentStep;
+            var row =
+                step / itemsPerRow;
+
+            ImGui.SetCursorPosX(
+                gridStartX +
+                column * horizontalAdvance);
+
+            ImGui.SetCursorPosY(
+                gridStartY +
+                row * verticalAdvance);
+
+            var actionId =
+                actions[step];
+
+            var stepCompleted =
+                step < plugin.CurrentStep;
 
             DrawActionCell(
                 actionId,
@@ -76,13 +261,33 @@ public sealed class OverlayWindow : Window, IDisposable
                 cellWidth);
         }
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
+        /*
+         * Reserve the complete grid area so ImGui knows
+         * how much space the manually positioned items occupy.
+         */
+        var rowCount =
+            Math.Max(
+                1,
+                (actions.Count +
+                 itemsPerRow - 1) /
+                itemsPerRow);
 
-        DrawStatus(selectedSequence.Actions);
+        var gridHeight =
+            cellHeight +
+            (rowCount - 1) *
+            verticalAdvance;
+
+        ImGui.SetCursorPosX(
+            gridStartX);
+
+        ImGui.SetCursorPosY(
+            gridStartY);
+
+        ImGui.Dummy(
+            new Vector2(
+                availableWidth,
+                gridHeight));
     }
-
     private static void DrawActionCell(
         uint actionId,
         int step,
@@ -99,68 +304,39 @@ public sealed class OverlayWindow : Window, IDisposable
 
         ImGui.BeginGroup();
 
-        var cellStartX = ImGui.GetCursorPosX();
+        var cellStartX =
+            ImGui.GetCursorPosX();
 
-        if (TryGetAction(actionId, out var action) &&
+        if (TryGetAction(
+                actionId,
+                out var action) &&
             action.Icon != 0)
         {
-            var actionName = action.Name.ToString();
-
-            var icon = Plugin.TextureProvider
-                .GetFromGameIcon(
-                    new GameIconLookup(action.Icon))
-                .GetWrapOrEmpty();
-
-            CentreNextItem(
-                cellStartX,
-                cellWidth,
-                iconSize.X);
-
-            ImGui.Image(
-                icon.Handle,
-                iconSize);
-
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.SetTooltip(
-                    $"{actionName}\n" +
-                    $"Step: {step + 1}\n" +
-                    $"Action ID: {actionId}");
-            }
-
-            DrawCentredLabel(
-                actionName,
+            DrawKnownAction(
+                action,
+                actionId,
+                step,
+                iconSize,
                 cellStartX,
                 cellWidth);
         }
         else
         {
-            CentreNextItem(
-                cellStartX,
-                cellWidth,
-                iconSize.X);
-
-            ImGui.Button(
-                $"?##MissingAction{step}",
-                iconSize);
-
-            if (ImGui.IsItemHovered())
-            {
-                ImGui.SetTooltip(
-                    $"Unknown action\n" +
-                    $"Step: {step + 1}\n" +
-                    $"Action ID: {actionId}");
-            }
-
-            DrawCentredLabel(
-                "Unknown",
+            DrawUnknownAction(
+                actionId,
+                step,
+                iconSize,
                 cellStartX,
                 cellWidth);
         }
 
-        // Ensures every action cell occupies the same width.
-        ImGui.SetCursorPosX(cellStartX);
-        ImGui.Dummy(new Vector2(cellWidth, 0));
+        ImGui.SetCursorPosX(
+            cellStartX);
+
+        ImGui.Dummy(
+            new Vector2(
+                cellWidth,
+                0));
 
         ImGui.EndGroup();
 
@@ -170,17 +346,93 @@ public sealed class OverlayWindow : Window, IDisposable
         }
     }
 
+    private static void DrawKnownAction(
+        LuminaAction action,
+        uint actionId,
+        int step,
+        Vector2 iconSize,
+        float cellStartX,
+        float cellWidth)
+    {
+        var actionName =
+            action.Name.ToString();
+
+        var icon =
+            Plugin.TextureProvider
+                .GetFromGameIcon(
+                    new GameIconLookup(
+                        action.Icon))
+                .GetWrapOrEmpty();
+
+        CentreNextItem(
+            cellStartX,
+            cellWidth,
+            iconSize.X);
+
+        ImGui.Image(
+            icon.Handle,
+            iconSize);
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(
+                $"{actionName}\n" +
+                $"Step: {step + 1}\n" +
+                $"Action ID: {actionId}");
+        }
+
+        DrawCentredLabel(
+            actionName,
+            cellStartX,
+            cellWidth);
+    }
+
+    private static void DrawUnknownAction(
+        uint actionId,
+        int step,
+        Vector2 iconSize,
+        float cellStartX,
+        float cellWidth)
+    {
+        CentreNextItem(
+            cellStartX,
+            cellWidth,
+            iconSize.X);
+
+        ImGui.Button(
+            $"?##MissingAction{step}",
+            iconSize);
+
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetTooltip(
+                $"Unknown action\n" +
+                $"Step: {step + 1}\n" +
+                $"Action ID: {actionId}");
+        }
+
+        DrawCentredLabel(
+            "Unknown",
+            cellStartX,
+            cellWidth);
+    }
+
     private static void DrawCentredLabel(
         string actionName,
         float cellStartX,
         float cellWidth)
     {
-        var label = ShortenLabel(actionName);
-        var textWidth = ImGui.CalcTextSize(label).X;
+        var label =
+            ShortenLabel(actionName);
+
+        var textWidth =
+            ImGui.CalcTextSize(label).X;
 
         ImGui.SetCursorPosX(
             cellStartX +
-            Math.Max(0, (cellWidth - textWidth) / 2));
+            Math.Max(
+                0,
+                (cellWidth - textWidth) / 2));
 
         ImGui.TextUnformatted(label);
 
@@ -198,13 +450,16 @@ public sealed class OverlayWindow : Window, IDisposable
     {
         ImGui.SetCursorPosX(
             cellStartX +
-            Math.Max(0, (cellWidth - itemWidth) / 2));
+            Math.Max(
+                0,
+                (cellWidth - itemWidth) / 2));
     }
 
     private static string ShortenLabel(
         string actionName)
     {
-        if (actionName.Length <= MaximumLabelLength)
+        if (actionName.Length <=
+            MaximumLabelLength)
         {
             return actionName;
         }
@@ -221,57 +476,11 @@ public sealed class OverlayWindow : Window, IDisposable
         out LuminaAction action)
     {
         var actionSheet =
-            Plugin.DataManager.GetExcelSheet<LuminaAction>();
+            Plugin.DataManager
+                .GetExcelSheet<LuminaAction>();
 
         return actionSheet.TryGetRow(
             actionId,
             out action);
-    }
-
-    private void DrawStatus(
-        IReadOnlyList<uint> actions)
-    {
-        if (plugin.IsSequenceComplete)
-        {
-            ImGui.Text("Sequence complete!");
-            return;
-        }
-
-        if (!plugin.IsTraining)
-        {
-            ImGui.Text("Training stopped.");
-            return;
-        }
-
-        if (plugin.CurrentStep >= actions.Count)
-        {
-            ImGui.Text("Sequence complete!");
-            return;
-        }
-
-        var nextActionId =
-            actions[plugin.CurrentStep];
-
-        if (TryGetAction(
-                nextActionId,
-                out var nextAction))
-        {
-            ImGui.Text(
-                $"Next: {nextAction.Name}");
-
-            ImGui.TextDisabled(
-                $"Step {plugin.CurrentStep + 1}" +
-                $"/{actions.Count} | " +
-                $"Action ID: {nextActionId}");
-        }
-        else
-        {
-            ImGui.Text(
-                $"Next action: " +
-                $"{plugin.CurrentStep + 1}/{actions.Count}");
-
-            ImGui.TextDisabled(
-                $"Unknown action ID: {nextActionId}");
-        }
     }
 }

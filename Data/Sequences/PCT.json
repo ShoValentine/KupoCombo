@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "pct-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "PCT",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        34650
+      ]
+    },
+    {
+      "id": "pct-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "PCT",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        34650
+      ]
+    }
+  ]
+}

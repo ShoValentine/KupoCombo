@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "drk-souleater-combo",
+      "name": "Souleater Combo",
+      "job": "DRK",
+      "category": "Single Target Combo",
+      "minimumLevel": 26,
+      "actions": [3617, 3623, 3632]
+    },
+    {
+      "id": "drk-standard-opener-dummy",
+      "name": "Standard Opener - TheBalance",
+      "job": "DRK",
+      "category": "Opener",
+      "minimumLevel": 100,
+      "actions": [
+        3624,
+        16470,
+        3617,
+        16472,
+        3623,
+        3632,
+        7390,
+        36932,
+        3639,
+        16470,
+        36928,
+        25757,
+        16470,
+        36929,
+        3643,
+        16470,
+        36930,
+        25757,
+        7392,
+        25755
+      ]
+    }
+  ]
+}

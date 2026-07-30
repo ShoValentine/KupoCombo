@@ -5,54 +5,151 @@ using Dalamud.Interface.Windowing;
 
 namespace KupoCombo.Windows;
 
-public class ConfigWindow : Window, IDisposable
+public sealed class ConfigWindow : Window, IDisposable
 {
     private readonly Configuration configuration;
 
-    // We give this window a constant ID using ###.
-    // This allows for labels to be dynamic, like "{FPS Counter}fps###XYZ counter window",
-    // and the window ID will always be "###XYZ counter window" for ImGui
-    public ConfigWindow(Plugin plugin) : base("A Wonderful Configuration Window###With a constant ID")
+    public ConfigWindow(Plugin plugin)
+        : base(
+            "KupoCombo Settings###KupoComboSettings",
+            ImGuiWindowFlags.NoCollapse)
     {
-        Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
-                ImGuiWindowFlags.NoScrollWithMouse;
-
-        Size = new Vector2(232, 90);
-        SizeCondition = ImGuiCond.Always;
-
         configuration = plugin.Configuration;
+
+        Size = new Vector2(430, 290);
+        SizeCondition = ImGuiCond.FirstUseEver;
+
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(380, 260),
+            MaximumSize = new Vector2(700, 500)
+        };
     }
 
-    public void Dispose() { }
-
-    public override void PreDraw()
+    public void Dispose()
     {
-        // Flags must be added or removed before Draw() is being called, or they won't apply
-        if (configuration.IsConfigWindowMovable)
-        {
-            Flags &= ~ImGuiWindowFlags.NoMove;
-        }
-        else
-        {
-            Flags |= ImGuiWindowFlags.NoMove;
-        }
     }
 
     public override void Draw()
     {
-        // Can't ref a property, so use a local copy
-        var configValue = configuration.SomePropertyToBeSavedAndWithADefault;
-        if (ImGui.Checkbox("Random Config Bool", ref configValue))
+        ImGui.Text("Overlay appearance");
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        DrawTransparencySetting();
+
+        ImGui.Spacing();
+
+        DrawIconScaleSetting();
+
+        ImGui.Spacing();
+
+        DrawTextScaleSetting();
+
+        ImGui.Spacing();
+
+        DrawIconSpacingSetting();
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        if (ImGui.Button(
+                "Reset Overlay Appearance",
+                new Vector2(220, 0)))
         {
-            configuration.SomePropertyToBeSavedAndWithADefault = configValue;
-            // Can save immediately on change if you don't want to provide a "Save and Close" button
+            configuration.OverlayTransparent = true;
+            configuration.OverlayIconScale = 1.0f;
+            configuration.OverlayTextScale = 1.0f;
+            configuration.OverlayIconSpacing = 12.0f;
+
             configuration.Save();
         }
 
-        var movable = configuration.IsConfigWindowMovable;
-        if (ImGui.Checkbox("Movable Config Window", ref movable))
+        ImGui.Spacing();
+
+        ImGui.TextDisabled(
+            "Resize the overlay by dragging its edges " +
+            "or bottom-right corner.");
+    }
+
+    private void DrawTransparencySetting()
+    {
+        var transparent =
+            configuration.OverlayTransparent;
+
+        if (ImGui.Checkbox(
+                "Transparent overlay",
+                ref transparent))
         {
-            configuration.IsConfigWindowMovable = movable;
+            configuration.OverlayTransparent =
+                transparent;
+
+            configuration.Save();
+        }
+    }
+
+    private void DrawIconScaleSetting()
+    {
+        var iconPercentage =
+            (int)MathF.Round(
+                configuration.OverlayIconScale * 100f);
+
+        ImGui.SetNextItemWidth(260);
+
+        if (ImGui.SliderInt(
+                "Icon size",
+                ref iconPercentage,
+                50,
+                200,
+                "%d%%"))
+        {
+            configuration.OverlayIconScale =
+                iconPercentage / 100f;
+
+            configuration.Save();
+        }
+    }
+
+    private void DrawTextScaleSetting()
+    {
+        var textPercentage =
+            (int)MathF.Round(
+                configuration.OverlayTextScale * 100f);
+
+        ImGui.SetNextItemWidth(260);
+
+        if (ImGui.SliderInt(
+                "Text size",
+                ref textPercentage,
+                50,
+                200,
+                "%d%%"))
+        {
+            configuration.OverlayTextScale =
+                textPercentage / 100f;
+
+            configuration.Save();
+        }
+    }
+
+    private void DrawIconSpacingSetting()
+    {
+        var iconSpacing =
+            configuration.OverlayIconSpacing;
+
+        ImGui.SetNextItemWidth(260);
+
+        if (ImGui.SliderFloat(
+                "Icon spacing",
+                ref iconSpacing,
+                -60f,
+                60f,
+                "%.0f px"))
+        {
+            configuration.OverlayIconSpacing =
+                iconSpacing;
+
             configuration.Save();
         }
     }

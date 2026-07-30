@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "whm-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "WHM",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        25859
+      ]
+    },
+    {
+      "id": "whm-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "WHM",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        25859
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "sge-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "SGE",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        24312
+      ]
+    },
+    {
+      "id": "sge-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "SGE",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        24312
+      ]
+    }
+  ]
+}

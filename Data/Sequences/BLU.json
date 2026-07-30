@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "blu-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "BLU",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        11385
+      ]
+    },
+    {
+      "id": "blu-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "BLU",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        11385
+      ]
+    }
+  ]
+}

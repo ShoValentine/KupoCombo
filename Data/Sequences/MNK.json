@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "mnk-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "MNK",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        53,
+        54,
+        56
+      ]
+    },
+    {
+      "id": "mnk-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "MNK",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        53,
+        54,
+        56
+      ]
+    }
+  ]
+}

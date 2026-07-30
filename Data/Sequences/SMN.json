@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "smn-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "SMN",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        3579
+      ]
+    },
+    {
+      "id": "smn-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "SMN",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        3579
+      ]
+    }
+  ]
+}

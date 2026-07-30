@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "pld-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "PLD",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        9,
+        15,
+        3539
+      ]
+    },
+    {
+      "id": "pld-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "PLD",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        9,
+        15,
+        3539
+      ]
+    }
+  ]
+}

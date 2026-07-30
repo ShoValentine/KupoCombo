@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "blm-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "BLM",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        3577
+      ]
+    },
+    {
+      "id": "blm-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "BLM",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        3577
+      ]
+    }
+  ]
+}

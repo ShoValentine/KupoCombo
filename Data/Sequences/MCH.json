@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "mch-basic-coming-soon",
+      "name": "Basic Rotation Coming Soon...",
+      "job": "MCH",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        7411,
+        7412,
+        7413
+      ]
+    },
+    {
+      "id": "mch-opener-coming-soon",
+      "name": "Opener Coming Soon...",
+      "job": "MCH",
+      "category": "WIP",
+      "minimumLevel": 0,
+      "actions": [
+        7411,
+        7412,
+        7413
+      ]
+    }
+  ]
+}
