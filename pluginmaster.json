@@ -8,7 +8,7 @@
     "AssemblyVersion": "0.1.0.0",
     "RepoUrl": "https://github.com/ShoValentine/KupoCombo",
     "ApplicableVersion": "any",
-    "DalamudApiLevel": 13,
+    "DalamudApiLevel": 14,
     "Tags": [
       "practice",
       "rotation",
