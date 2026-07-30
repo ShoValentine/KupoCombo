@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "sequences": [
+    {
+      "id": "drk-souleater-combo",
+      "name": "Souleater Combo",
+      "job": "DRK",
+      "category": "Single Target Combo",
+      "minimumLevel": 26,
+      "actions": [
+        3617,
+        3623,
+        3632
+      ]
+    },
+    {
+      "id": "drk-stalwart-soul-combo",
+      "name": "Stalwart Soul Combo",
+      "job": "DRK",
+      "category": "Area Combo",
+      "minimumLevel": 40,
+      "actions": [
+        3621,
+        16468
+      ]
+    }
+  ]
+}
