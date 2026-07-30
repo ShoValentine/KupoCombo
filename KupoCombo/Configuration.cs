@@ -6,7 +6,7 @@ namespace KupoCombo;
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
 {
-    public int Version { get; set; } = 6;
+    public int Version { get; set; } = 1;
 
     public float OverlayIconScale { get; set; } = 1.0f;
 

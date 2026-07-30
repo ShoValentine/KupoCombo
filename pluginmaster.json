@@ -1,0 +1,27 @@
+[
+  {
+    "Author": "Sho Valentine",
+    "Name": "KupoCombo",
+    "Punchline": "Practice your rotations and openers.",
+    "Description": "A training overlay for practising openers, rotations, and combat sequences.",
+    "InternalName": "KupoCombo",
+    "AssemblyVersion": "0.1.0.0",
+    "RepoUrl": "https://github.com/ShoValentine/KupoCombo",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 13,
+    "Tags": [
+      "practice",
+      "rotation",
+      "training",
+      "combo",
+      "kupo"
+    ],
+    "IconUrl": "https://raw.githubusercontent.com/ShoValentine/KupoCombo/master/Data/kupoicon.png",
+    "IsHide": false,
+    "IsTestingExclusive": false,
+    "DownloadLinkInstall": "https://github.com/ShoValentine/KupoCombo/releases/download/v0.1.0/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/ShoValentine/KupoCombo/releases/download/v0.1.0/latest.zip",
+    "DownloadLinkTesting": "https://github.com/ShoValentine/KupoCombo/releases/download/v0.1.0/latest.zip",
+    "LastUpdate": "1785415037"
+  }
+]
