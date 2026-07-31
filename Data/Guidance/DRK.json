@@ -5,16 +5,24 @@
     {
       "sequenceId": "drk-standard-opener-dummy",
       "summary": "Standard level 100 Dark Knight opener arranged around common raid-buff timing. The training-dummy version omits pre-pull The Blackest Night because the shield will not break.",
+      "startPrompt": {
+        "text": "Begin with Unmend when you are ready. Your first correct action starts the opener, kupo!",
+        "durationSeconds": 5
+      },
+      "mistakePrompt": {
+        "text": "That action was out of sequence. The opener has reset and is ready for another attempt.",
+        "durationSeconds": 5
+      },
+      "completionPrompt": {
+        "text": "Opener complete. Every planned action landed in order, kupo!",
+        "durationSeconds": 5
+      },
       "steps": [
         {
           "step": 1,
           "advice": "Unmend starts the GCD rolling while slightly delaying the heavy hits for typical raid-buff application.",
           "timing": "Use roughly one second before the pull finishes.",
-          "commonMistake": "Opening with Hard Slash changes the alignment and requires an extra Hard Slash later.",
-          "prompt": {
-            "text": "Begin with Unmend when you are ready. Your first correct action starts the opener, kupo!",
-            "durationSeconds": 5
-          }
+          "commonMistake": "Opening with Hard Slash changes the alignment and requires an extra Hard Slash later."
         },
         {
           "step": 2,
@@ -70,11 +78,7 @@
           "step": 20,
           "advice": "Salt and Darkness detonates Salted Earth for additional burst damage.",
           "timing": "Use before Salted Earth expires.",
-          "commonMistake": "Forgetting the follow-up wastes a large portion of Salted Earth's value.",
-          "prompt": {
-            "text": "Opener complete. Every planned action landed in order, kupo!",
-            "durationSeconds": 5
-          }
+          "commonMistake": "Forgetting the follow-up wastes a large portion of Salted Earth's value."
         }
       ]
     }
