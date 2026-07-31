@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "job": "DRK",
+  "sequences": [
+    {
+      "sequenceId": "drk-standard-opener-dummy",
+      "summary": "Standard level 100 Dark Knight opener arranged around common raid-buff timing. The training-dummy version omits pre-pull The Blackest Night because the shield will not break.",
+      "steps": [
+        {
+          "step": 1,
+          "advice": "Unmend starts the GCD rolling while slightly delaying the heavy hits for typical raid-buff application.",
+          "timing": "Use roughly one second before the pull finishes.",
+          "commonMistake": "Opening with Hard Slash changes the alignment and requires an extra Hard Slash later.",
+          "prompt": {
+            "text": "Begin with Unmend when you are ready. Your first correct action starts the opener, kupo!",
+            "durationSeconds": 5
+          }
+        },
+        {
+          "step": 2,
+          "advice": "Apply Darkside early and begin spending MP before overcapping.",
+          "timing": "Weave before Hard Slash only when doing so will not clip the GCD.",
+          "commonMistake": "Forcing this weave from long range can delay Hard Slash. Move it after Hard Slash instead if needed."
+        },
+        {
+          "step": 4,
+          "advice": "Living Shadow has a long spawn delay and updates with buffs in real time, so summon it before raid buffs appear.",
+          "timing": "Use immediately after the first melee GCD.",
+          "commonMistake": "Delaying Living Shadow can push its final attacks outside party buffs.",
+          "prompt": {
+            "text": "Living Shadow goes out early so its full sequence reaches the raid-buff window.",
+            "durationSeconds": 4
+          }
+        },
+        {
+          "step": 7,
+          "advice": "Delirium enables the Scarlet Delirium combo and generates MP during the burst.",
+          "timing": "Align it with raid buffs and the upcoming three-GCD Delirium combo.",
+          "commonMistake": "Entering Delirium above 70 Blood can overcap. Spend Blood beforehand when necessary."
+        },
+        {
+          "step": 9,
+          "advice": "Salted Earth is a 90-second offensive cooldown and should generally be used as soon as it is available.",
+          "timing": "Place it before the Delirium combo so its damage begins inside the burst.",
+          "commonMistake": "Holding it unnecessarily loses uses over the encounter."
+        },
+        {
+          "step": 11,
+          "advice": "Scarlet Delirium begins the three-part Delirium weaponskill combo.",
+          "timing": "Keep the GCD rolling and weave burst abilities between these weaponskills.",
+          "commonMistake": "Pausing between Delirium GCDs can lose buff coverage.",
+          "prompt": {
+            "text": "Keep the Delirium combo moving while weaving the remaining burst abilities.",
+            "durationSeconds": 4
+          }
+        },
+        {
+          "step": 12,
+          "advice": "Shadowbringer has two charges. Both belong in even-minute raid buffs whenever possible.",
+          "timing": "Weave one charge here and the second later in the same burst.",
+          "commonMistake": "Sitting on both charges risks losing a use."
+        },
+        {
+          "step": 15,
+          "advice": "Carve and Spit is a one-minute offensive cooldown that also restores MP.",
+          "timing": "Use promptly in each minute burst so it stays aligned.",
+          "commonMistake": "Delaying it can cause later uses to miss punctual raid buffs."
+        },
+        {
+          "step": 20,
+          "advice": "Salt and Darkness detonates Salted Earth for additional burst damage.",
+          "timing": "Use before Salted Earth expires.",
+          "commonMistake": "Forgetting the follow-up wastes a large portion of Salted Earth's value.",
+          "prompt": {
+            "text": "Opener complete. Every planned action landed in order, kupo!",
+            "durationSeconds": 5
+          }
+        }
+      ]
+    }
+  ]
+}
