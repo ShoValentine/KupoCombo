@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures;
 using Dalamud.Interface.Windowing;
 
 namespace KupoCombo.Windows;
@@ -34,6 +35,7 @@ public sealed class PromptOverlayWindow : Window, IDisposable
         IsOpen = false;
         ShowCloseButton = false;
         AllowPinning = false;
+        AllowClickthrough = true;
         BgAlpha = 0f;
 
         Size = new Vector2(590f, 150f);
@@ -77,14 +79,19 @@ public sealed class PromptOverlayWindow : Window, IDisposable
         var moogleSize = BaseMoogleSize * moogleScale;
         var wrapWidth = Math.Max(100f, bubbleWidth - padding * 2f);
 
-        var measuredText = ImGui.CalcTextSize(
-            plugin.PromptManager.Text,
-            false,
-            wrapWidth);
+        var unwrappedTextSize = ImGui.CalcTextSize(
+            plugin.PromptManager.Text);
+
+        var estimatedLineCount = Math.Max(
+            1f,
+            MathF.Ceiling(unwrappedTextSize.X / wrapWidth));
+
+        var measuredTextHeight =
+            ImGui.GetTextLineHeight() * estimatedLineCount;
 
         var bubbleHeight = Math.Max(
             BaseBubbleHeight * promptScale,
-            measuredText.Y + padding * 2f);
+            measuredTextHeight + padding * 2f);
 
         var windowWidth =
             margin * 2f +
