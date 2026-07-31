@@ -9,9 +9,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-  <Content Include="..\Data\Sequences\*.json">
-    <Link>Sequences\%(Filename)%(Extension)</Link>
-    <TargetPath>Sequences\%(Filename)%(Extension)</TargetPath>
+    <Content Include="..\Data\Sequences\*.json">
+      <Link>Sequences\%(Filename)%(Extension)</Link>
+      <TargetPath>Sequences\%(Filename)%(Extension)</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </Content>
+
+    <Content Include="..\Data\Guidance\*.json">
+      <Link>Guidance\%(Filename)%(Extension)</Link>
+      <TargetPath>Guidance\%(Filename)%(Extension)</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </Content>
+
+    <Content Include="..\Data\kupoicon.png">
+      <Link>Assets\kupoicon.png</Link>
+      <TargetPath>Assets\kupoicon.png</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
