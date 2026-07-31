@@ -17,6 +17,12 @@ public sealed class SequenceGuidance
 
     public string Summary { get; set; } = string.Empty;
 
+    public TrainingPrompt? StartPrompt { get; set; }
+
+    public TrainingPrompt? MistakePrompt { get; set; }
+
+    public TrainingPrompt? CompletionPrompt { get; set; }
+
     public List<StepGuidance> Steps { get; set; } = new();
 }
 
@@ -32,6 +38,7 @@ public sealed class StepGuidance
 
     public string CommonMistake { get; set; } = string.Empty;
 
+    // Displayed when this step becomes the next expected action.
     public TrainingPrompt? Prompt { get; set; }
 }
 
