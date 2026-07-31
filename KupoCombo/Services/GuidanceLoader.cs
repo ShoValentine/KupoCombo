@@ -18,6 +18,30 @@ public static class GuidanceLoader
 
     public static GuidanceFile Load(
         string filePath,
+        string expectedJob)
+    {
+        var guidanceDirectory = Path.GetDirectoryName(filePath);
+        var dataDirectory = guidanceDirectory == null
+            ? null
+            : Directory.GetParent(guidanceDirectory)?.FullName;
+
+        var sequenceFilePath = dataDirectory == null
+            ? string.Empty
+            : Path.Combine(
+                dataDirectory,
+                "Sequences",
+                $"{expectedJob}.json");
+
+        IReadOnlyCollection<SequenceDefinition> sequences =
+            File.Exists(sequenceFilePath)
+                ? SequenceLoader.Load(sequenceFilePath, expectedJob)
+                : Array.Empty<SequenceDefinition>();
+
+        return Load(filePath, expectedJob, sequences);
+    }
+
+    public static GuidanceFile Load(
+        string filePath,
         string expectedJob,
         IReadOnlyCollection<SequenceDefinition> sequences)
     {
