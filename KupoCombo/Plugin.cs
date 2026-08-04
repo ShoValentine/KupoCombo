@@ -66,14 +66,21 @@ public sealed class Plugin : IDalamudPlugin
 
     public string CurrentJob { get; private set; } = string.Empty;
 
-    public int CurrentSequenceLength => SelectedSequence?.Actions.Count ?? 0;
+    public int CurrentSequenceLength =>
+        TrainingSession.Length > 0
+            ? TrainingSession.Length
+            : SelectedSequence?.Actions.Count ?? 0;
 
     public string SelectedSequenceName =>
-        SelectedSequence?.DisplayName ?? "No sequence selected";
+        TrainingSession.Policy?.Name
+        ?? SelectedSequence?.DisplayName
+        ?? "No sequence selected";
 
     public bool IsTraining => TrainingSession.IsActive;
 
     public bool IsSequenceComplete => TrainingSession.IsComplete;
+
+    public bool IsDynamicPractice => TrainingSession.IsEndless;
 
     public int CurrentStep => TrainingSession.CurrentStep;
 
@@ -169,6 +176,32 @@ public sealed class Plugin : IDalamudPlugin
         Log.Information($"Armed sequence: {sequence.Id}");
     }
 
+    public void StartDynamicPractice()
+    {
+        if (!CurrentJob.Equals("DRK", StringComparison.OrdinalIgnoreCase))
+        {
+            ChatGui.PrintError(
+                "The conditional practice preview is currently available for DRK only.",
+                "KupoCombo");
+            return;
+        }
+
+        SelectedSequence = null;
+        TrainingSession.Start(new DarkKnightComboPolicy());
+        OverlayWindow.IsOpen = true;
+
+        ShowPrompt(
+            new TrainingPrompt
+            {
+                Text =
+                    "Endless DRK combo practice started. " +
+                    "KupoCombo will recalculate the next action after every input.",
+                DurationSeconds = 5f
+            });
+
+        Log.Information("Started DRK conditional practice preview.");
+    }
+
     public void StopTraining()
     {
         ResetTrainingState();
@@ -177,14 +210,20 @@ public sealed class Plugin : IDalamudPlugin
 
     public void SimulateCorrectAction()
     {
-        if (!IsTraining ||
-            SelectedSequence == null ||
-            CurrentStep >= CurrentSequenceLength)
+        if (!IsTraining)
         {
             return;
         }
 
-        OnActionUsed(SelectedSequence.Actions[CurrentStep]);
+        var preferredActionId =
+            TrainingSession.CurrentDecision?.PreferredActionId ?? 0;
+
+        if (preferredActionId == 0)
+        {
+            return;
+        }
+
+        OnActionUsed(preferredActionId);
     }
 
     public void ShowTestPrompt()
@@ -541,12 +580,30 @@ public sealed class Plugin : IDalamudPlugin
                 ShowPrompt(GetStepGuidance(CurrentStep)?.Prompt);
                 return;
 
+            case TrainingActionOutcome.Acceptable:
+                Log.Information(
+                    $"Accepted alternative action: {actionId}. " +
+                    $"Preferred: {result.ExpectedActionId}.");
+                return;
+
             case TrainingActionOutcome.Incorrect:
                 Log.Warning(
                     $"Incorrect action: {result.UsedActionId}. Expected: " +
-                    $"{result.ExpectedActionId}. Resetting sequence progress.");
+                    $"{result.ExpectedActionId}. Recalculating training state.");
 
-                ShowPrompt(GetSelectedSequenceGuidance()?.MistakePrompt);
+                var mistakePrompt =
+                    GetSelectedSequenceGuidance()?.MistakePrompt;
+
+                if (mistakePrompt == null && IsDynamicPractice)
+                {
+                    mistakePrompt = new TrainingPrompt
+                    {
+                        Text = result.DecisionReason,
+                        DurationSeconds = 3f
+                    };
+                }
+
+                ShowPrompt(mistakePrompt);
                 return;
 
             case TrainingActionOutcome.Completed:
