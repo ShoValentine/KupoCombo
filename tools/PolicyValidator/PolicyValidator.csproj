@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\KupoCombo\Models\RulePolicyDefinition.cs"
+             Link="Models\RulePolicyDefinition.cs" />
+    <Compile Include="..\..\KupoCombo\Models\TrainingDecision.cs"
+             Link="Models\TrainingDecision.cs" />
+    <Compile Include="..\..\KupoCombo\Services\RulePolicyLoader.cs"
+             Link="Services\RulePolicyLoader.cs" />
+  </ItemGroup>
+</Project>
