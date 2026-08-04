@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "policies": [
+    {
+      "id": "drk-standard-dummy-100",
+      "name": "Standard Training Dummy",
+      "job": "DRK",
+      "minimumLevel": 100,
+      "profile": {
+        "minimumTargetCount": 1,
+        "maximumTargetCount": 1,
+        "assumesContinuousUptime": true,
+        "burstCycleSeconds": 120,
+        "notes": "Single-target uninterrupted training-dummy profile. Encounter downtime and defensive planning are outside this profile."
+      },
+      "actions": {
+        "hardSlash": {
+          "actionId": 3617,
+          "displayName": "Hard Slash",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 1
+        },
+        "syphonStrike": {
+          "actionId": 3623,
+          "displayName": "Syphon Strike",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 2
+        },
+        "souleater": {
+          "actionId": 3632,
+          "displayName": "Souleater",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 26
+        },
+        "delirium": {
+          "actionId": 7390,
+          "displayName": "Delirium",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 68
+        },
+        "bloodspiller": {
+          "actionId": 7392,
+          "displayName": "Bloodspiller",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 62
+        },
+        "edgeOfDarkness": {
+          "actionId": 16467,
+          "displayName": "Edge of Darkness",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 40
+        },
+        "edgeOfShadow": {
+          "actionId": 16470,
+          "displayName": "Edge of Shadow",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 74,
+          "adjustedFrom": "edgeOfDarkness"
+        },
+        "scarletDelirium": {
+          "actionId": 36928,
+          "displayName": "Scarlet Delirium",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 100,
+          "adjustedFrom": "bloodspiller"
+        },
+        "comeuppance": {
+          "actionId": 36929,
+          "displayName": "Comeuppance",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 100,
+          "adjustedFrom": "bloodspiller"
+        },
+        "torcleaver": {
+          "actionId": 36930,
+          "displayName": "Torcleaver",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 100,
+          "adjustedFrom": "bloodspiller"
+        }
+      },
+      "statuses": {
+        "delirium": 3836,
+        "deliriumLegacy": 1972
+      },
+      "stateInputs": {
+        "blood": {
+          "kind": "resource",
+          "provider": "drk.blood",
+          "minimum": 0,
+          "maximum": 100,
+          "unit": "gauge"
+        },
+        "mp": {
+          "kind": "resource",
+          "provider": "player.mp",
+          "minimum": 0,
+          "maximum": 10000,
+          "unit": "mp"
+        },
+        "darksideMs": {
+          "kind": "timer",
+          "provider": "drk.darkside_ms",
+          "minimum": 0,
+          "unit": "milliseconds"
+        },
+        "darkArts": {
+          "kind": "boolean",
+          "provider": "drk.dark_arts"
+        },
+        "deliriumStep": {
+          "kind": "integer",
+          "provider": "drk.delirium_step",
+          "minimum": 0
+        }
+      },
+      "combos": {
+        "souleater": {
+          "steps": [
+            "hardSlash",
+            "syphonStrike",
+            "souleater"
+          ],
+          "minimumLevel": 26,
+          "breaksOnOtherGcd": true
+        }
+      },
+      "rules": [
+        {
+          "id": "follow-delirium-chain",
+          "type": "followAdjustedAction",
+          "lane": "gcd",
+          "priority": 1000,
+          "action": "bloodspiller",
+          "adjustedActions": [
+            "scarletDelirium",
+            "comeuppance",
+            "torcleaver"
+          ],
+          "reason": "Use the action currently replacing Bloodspiller to continue the Delirium chain.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "spend-legacy-delirium-stack",
+          "type": "spendStatusStacks",
+          "lane": "gcd",
+          "priority": 950,
+          "action": "bloodspiller",
+          "status": "deliriumLegacy",
+          "reason": "Spend the active Delirium stack on Bloodspiller.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "prevent-blood-overcap-before-souleater",
+          "type": "preventResourceOvercap",
+          "lane": "gcd",
+          "priority": 900,
+          "action": "bloodspiller",
+          "resource": "blood",
+          "threshold": 80,
+          "incomingAction": "souleater",
+          "incomingGain": 20,
+          "reason": "Spend Blood before Souleater would overcap the gauge.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "spend-free-dark-arts",
+          "type": "useAction",
+          "lane": "weave",
+          "priority": 850,
+          "action": "edgeOfShadow",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "darkArts",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Use the free Dark Arts Edge before it is overwritten."
+        },
+        {
+          "id": "prevent-mp-overcap",
+          "type": "preventResourceOvercap",
+          "lane": "weave",
+          "priority": 800,
+          "action": "edgeOfShadow",
+          "resource": "mp",
+          "threshold": 9000,
+          "reason": "Weave Edge to avoid overcapping MP."
+        },
+        {
+          "id": "refresh-darkside",
+          "type": "useAction",
+          "lane": "weave",
+          "priority": 700,
+          "action": "edgeOfShadow",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "darksideMs",
+                "operator": "lessThanOrEqual",
+                "value": 10000
+              },
+              {
+                "source": "stateValue",
+                "key": "mp",
+                "operator": "greaterThanOrEqual",
+                "value": 3000
+              }
+            ]
+          },
+          "suggestionReason": "Refresh Darkside with Edge before it expires."
+        },
+        {
+          "id": "use-delirium",
+          "type": "useCooldown",
+          "lane": "weave",
+          "priority": 600,
+          "action": "delirium",
+          "cooldown": "delirium",
+          "conditions": {
+            "all": [
+              {
+                "source": "acceptedActionCount",
+                "operator": "greaterThan",
+                "value": 0
+              }
+            ],
+            "none": [
+              {
+                "source": "statusActive",
+                "key": "delirium",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Delirium is ready; weave it to begin the next burst cycle."
+        },
+        {
+          "id": "continue-souleater-combo",
+          "type": "continueCombo",
+          "lane": "gcd",
+          "priority": 100,
+          "combo": "souleater",
+          "reason": "Continue the current Souleater combo.",
+          "mistakeResponse": "keepProgress"
+        }
+      ]
+    }
+  ]
+}
