@@ -48,23 +48,31 @@ public unsafe sealed class TrainingStateReader
         if (localPlayer == null)
         {
             state.SetGauge("mp", 0);
-            state.ReplaceStatuses(Array.Empty<uint>());
+            state.ReplaceStatuses(Array.Empty<StatusSnapshot>());
             return;
         }
 
         state.SetGauge("mp", (int)localPlayer.CurrentMp);
 
-        var statusIds = new List<uint>(localPlayer.StatusList.Length);
+        var statuses = new List<StatusSnapshot>(localPlayer.StatusList.Length);
 
         foreach (var status in localPlayer.StatusList)
         {
-            if (status.StatusId != 0)
+            if (status.StatusId == 0)
             {
-                statusIds.Add(status.StatusId);
+                continue;
             }
+
+            statuses.Add(
+                new StatusSnapshot
+                {
+                    StatusId = status.StatusId,
+                    Param = status.Param,
+                    RemainingSeconds = Math.Max(0f, status.RemainingTime)
+                });
         }
 
-        state.ReplaceStatuses(statusIds);
+        state.ReplaceStatuses(statuses);
     }
 
     private static void RefreshActionManager(
@@ -83,8 +91,15 @@ public unsafe sealed class TrainingStateReader
             actionManager->Combo.Action,
             actionManager->Combo.Timer);
 
-        foreach (var actionId in policy.TrackedActionIds)
+        var actionIds = new HashSet<uint>(policy.TrackedActionIds);
+        actionIds.UnionWith(policy.AdvisoryActionIds);
+
+        foreach (var actionId in actionIds)
         {
+            state.SetAdjustedAction(
+                actionId,
+                actionManager->GetAdjustedActionId(actionId));
+
             state.SetCooldown(
                 actionId,
                 ReadCooldown(actionManager, actionId, state.Level));
