@@ -173,7 +173,7 @@ static IReadOnlyList<DiagnosticScenario> CreateDarkKnightScenarios()
             "Suggests Edge before MP overcap",
             mpState,
             HardSlash,
-            suggestions: new[] { EdgeOfShadow }));
+            Suggestions: new[] { EdgeOfShadow }));
 
     var darkArtsState = CreateDarkKnightState();
     darkArtsState.SetGauge("dark_arts", 1);
@@ -182,7 +182,7 @@ static IReadOnlyList<DiagnosticScenario> CreateDarkKnightScenarios()
             "Suggests the free Dark Arts Edge",
             darkArtsState,
             HardSlash,
-            suggestions: new[] { EdgeOfShadow }));
+            Suggestions: new[] { EdgeOfShadow }));
 
     var deliriumState = CreateDarkKnightState();
     deliriumState.RecordAcceptedAction(HardSlash);
@@ -198,7 +198,7 @@ static IReadOnlyList<DiagnosticScenario> CreateDarkKnightScenarios()
             "Suggests Delirium when ready",
             deliriumState,
             SyphonStrike,
-            suggestions: new[] { Delirium }));
+            Suggestions: new[] { Delirium }));
 
     return scenarios;
 }
