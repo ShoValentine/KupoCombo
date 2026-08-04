@@ -18,6 +18,19 @@ State inputs reference named providers such as:
 
 The runtime resolves those provider names into values placed in `TrainingState`. Most policy behaviour should therefore be data-driven. A job may still need a small state-provider adapter for gauges that Dalamud exposes through job-specific structures, but it should not need a bespoke rotation-policy class.
 
+## Runtime evaluator
+
+`RuleSetTrainingPolicy` is the shared interpreter for schema version 1. It:
+
+1. filters disabled rules and rules whose conditions do not match
+2. evaluates rules in descending priority order
+3. selects the highest-priority matching GCD rule
+4. preserves explicit and dynamically safe acceptable GCD alternatives
+5. collects matching weave rules as non-punitive suggestions
+6. returns one `TrainingDecision` to the existing training session and overlay
+
+The evaluator currently implements every rule type declared by schema version 1. DRK priority practice loads `Data/Policies/DRK.json` at runtime through this evaluator. The former hand-coded DRK logic remains temporarily as a parity oracle in CI and may be removed once a second job proves the schema is sufficiently general.
+
 ## File structure
 
 ```json
@@ -154,6 +167,8 @@ Required fields: `action`, `adjustedActions`.
 
 Recommends a spender when a named resource reaches a threshold. `incomingAction` and `incomingGain` may describe an impending gain, such as Souleater adding Blood.
 
+When the spender is preferred but the next combo GCD is still safe, the evaluator may expose that combo GCD as an acceptable alternative. When the incoming GCD would actually overcap the resource, it is not accepted as an alternative.
+
 Required fields: `action`, `resource`, `threshold`.
 
 ### `preventChargeOvercap`
@@ -200,6 +215,8 @@ Breaking changes increment `schemaVersion`. Loaders must reject versions they do
 
 Additive changes should remain compatible when possible. New rule types require evaluator support before profiles may use them.
 
-## Reference profile
+## Reference profile and validation
 
-`Data/Policies/DRK.json` expresses the current DRK proof-of-concept through this schema. It is the first migration target for the generic evaluator and should eventually replace `DarkKnightComboPolicy.cs` without changing the existing DRK diagnostic outcomes.
+`Data/Policies/DRK.json` is the first live profile. It drives DRK priority practice through `RuleSetTrainingPolicy` and expresses combo continuation, adjusted Delirium actions, Blood and MP overcap prevention, Dark Arts spending, Darkside maintenance and Delirium use as reusable rule data.
+
+CI loads every policy through the production loader, executes ten deterministic DRK scenarios through the generic evaluator, checks full decision parity against the preserved legacy policy, and then builds the Dalamud plugin.
