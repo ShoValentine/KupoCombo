@@ -161,7 +161,7 @@ internal sealed class PolicyConditionEvaluator
             JsonValueKind.String => context.GetActionId(
                 condition.Value.GetString() ?? string.Empty,
                 state),
-            _ => 0
+            _ => 0u
         };
 
         return condition.Operator switch
