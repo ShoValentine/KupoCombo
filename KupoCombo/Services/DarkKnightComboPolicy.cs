@@ -42,6 +42,11 @@ public sealed class DarkKnightComboPolicy : ITrainingPolicy
 
     public TrainingDecision Evaluate(TrainingState state)
     {
+        if (state.Level == 0)
+        {
+            state.SetLevel(Definition.MinimumLevel);
+        }
+
         return inner.Evaluate(state);
     }
 }
