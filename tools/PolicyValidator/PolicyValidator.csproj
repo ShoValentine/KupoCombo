@@ -11,7 +11,19 @@
              Link="Models\RulePolicyDefinition.cs" />
     <Compile Include="..\..\KupoCombo\Models\TrainingDecision.cs"
              Link="Models\TrainingDecision.cs" />
+    <Compile Include="..\..\KupoCombo\Models\TrainingState.cs"
+             Link="Models\TrainingState.cs" />
+    <Compile Include="..\..\KupoCombo\Services\ITrainingPolicy.cs"
+             Link="Services\ITrainingPolicy.cs" />
+    <Compile Include="..\..\KupoCombo\Services\LegacyDarkKnightComboPolicy.cs"
+             Link="Services\LegacyDarkKnightComboPolicy.cs" />
+    <Compile Include="..\..\KupoCombo\Services\PolicyConditionEvaluator.cs"
+             Link="Services\PolicyConditionEvaluator.cs" />
+    <Compile Include="..\..\KupoCombo\Services\PolicyEvaluationContext.cs"
+             Link="Services\PolicyEvaluationContext.cs" />
     <Compile Include="..\..\KupoCombo\Services\RulePolicyLoader.cs"
              Link="Services\RulePolicyLoader.cs" />
+    <Compile Include="..\..\KupoCombo\Services\RuleSetTrainingPolicy.cs"
+             Link="Services\RuleSetTrainingPolicy.cs" />
   </ItemGroup>
 </Project>
