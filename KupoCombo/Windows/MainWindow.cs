@@ -150,13 +150,13 @@ public sealed class MainWindow : Window, IDisposable
 
         ImGui.Text("Conditional practice preview");
         ImGui.TextWrapped(
-            "Runs the DRK core combo indefinitely and recalculates the next " +
-            "recommended action after every accepted input.");
+            "Reads the live DRK combo and Blood gauge, then recalculates " +
+            "the preferred and acceptable next actions continuously.");
 
         ImGui.Spacing();
 
         if (ImGui.Button(
-                "Start Endless DRK Combo",
+                "Start DRK Priority Practice",
                 new Vector2(245, 0)))
         {
             plugin.StartDynamicPractice();
@@ -219,6 +219,7 @@ public sealed class MainWindow : Window, IDisposable
                 {
                     ImGui.Text(
                         $"Armed | {plugin.SelectedSequenceName}");
+                    DrawDynamicStateDetails();
                     return;
                 }
 
@@ -232,6 +233,7 @@ public sealed class MainWindow : Window, IDisposable
                     ImGui.Text(
                         $"Practising {plugin.SelectedSequenceName} | " +
                         $"Accepted actions: {plugin.CurrentStep}");
+                    DrawDynamicStateDetails();
                     return;
                 }
 
@@ -245,5 +247,26 @@ public sealed class MainWindow : Window, IDisposable
                 ImGui.Text("Stopped");
                 return;
         }
+    }
+
+    private void DrawDynamicStateDetails()
+    {
+        var state = plugin.TrainingSession.Snapshot;
+        var decision = plugin.TrainingSession.CurrentDecision;
+
+        ImGui.Spacing();
+        ImGui.TextDisabled(
+            $"Blood: {state.GetGauge("blood")} | " +
+            $"MP: {state.GetGauge("mp")} | " +
+            $"Combo: {state.NativeComboActionId} " +
+            $"({state.ComboRemainingSeconds:0.0}s)");
+
+        if (decision == null || string.IsNullOrWhiteSpace(decision.Reason))
+        {
+            return;
+        }
+
+        ImGui.TextWrapped(
+            $"Decision: {decision.Reason}");
     }
 }
