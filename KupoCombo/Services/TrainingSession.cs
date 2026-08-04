@@ -118,11 +118,13 @@ public sealed class TrainingSession
             CurrentDecision == null ||
             CurrentDecision.IsComplete)
         {
-            return new TrainingActionResult
-            {
-                Outcome = TrainingActionOutcome.Ignored,
-                UsedActionId = actionId
-            };
+            return Ignored(actionId);
+        }
+
+        if (Policy.IgnoreUntrackedActions &&
+            !IsTrackedAction(Policy, actionId))
+        {
+            return Ignored(actionId);
         }
 
         var decision = CurrentDecision;
@@ -186,6 +188,30 @@ public sealed class TrainingSession
             CompletedStep = CurrentStep,
             WasPreferred = wasPreferred,
             DecisionReason = decision.Reason
+        };
+    }
+
+    private static bool IsTrackedAction(
+        ITrainingPolicy policy,
+        uint actionId)
+    {
+        foreach (var trackedActionId in policy.TrackedActionIds)
+        {
+            if (trackedActionId == actionId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static TrainingActionResult Ignored(uint actionId)
+    {
+        return new TrainingActionResult
+        {
+            Outcome = TrainingActionOutcome.Ignored,
+            UsedActionId = actionId
         };
     }
 }
