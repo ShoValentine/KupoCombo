@@ -15,6 +15,8 @@ public interface ITrainingPolicy
 
     IReadOnlyCollection<uint> TrackedActionIds { get; }
 
+    IReadOnlyCollection<uint> AdvisoryActionIds { get; }
+
     bool IgnoreUntrackedActions { get; }
 
     TrainingDecision Evaluate(TrainingState state);
