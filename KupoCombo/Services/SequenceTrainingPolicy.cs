@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using KupoCombo.Models;
 
@@ -21,6 +22,8 @@ public sealed class SequenceTrainingPolicy : ITrainingPolicy
     public int? ExpectedLength => Sequence.Actions.Count;
 
     public IReadOnlyCollection<uint> TrackedActionIds => Sequence.Actions;
+
+    public IReadOnlyCollection<uint> AdvisoryActionIds => Array.Empty<uint>();
 
     public bool IgnoreUntrackedActions => false;
 
