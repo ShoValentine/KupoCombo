@@ -21,7 +21,7 @@ public sealed class MainWindow : Window, IDisposable
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(420, 320),
-            MaximumSize = new Vector2(700, 620)
+            MaximumSize = new Vector2(700, 700)
         };
     }
 
@@ -127,6 +127,13 @@ public sealed class MainWindow : Window, IDisposable
         }
 
         if (ImGui.Button(
+                "Run DRK Policy Self-Test",
+                new Vector2(245, 0)))
+        {
+            plugin.RunDarkKnightPolicyDiagnostics();
+        }
+
+        if (ImGui.Button(
                 "Show Test Moogle Prompt",
                 new Vector2(245, 0)))
         {
@@ -150,8 +157,8 @@ public sealed class MainWindow : Window, IDisposable
 
         ImGui.Text("Conditional practice preview");
         ImGui.TextWrapped(
-            "Reads the live DRK combo and Blood gauge, then recalculates " +
-            "the preferred and acceptable next actions continuously.");
+            "Reads live combo, Blood, MP, Dark Arts, Delirium and cooldown " +
+            "state. It evaluates the next GCD separately from suggested weaves.");
 
         ImGui.Spacing();
 
@@ -232,7 +239,7 @@ public sealed class MainWindow : Window, IDisposable
                 {
                     ImGui.Text(
                         $"Practising {plugin.SelectedSequenceName} | " +
-                        $"Accepted actions: {plugin.CurrentStep}");
+                        $"Accepted GCDs: {plugin.CurrentStep}");
                     DrawDynamicStateDetails();
                     return;
                 }
@@ -261,12 +268,26 @@ public sealed class MainWindow : Window, IDisposable
             $"Combo: {state.NativeComboActionId} " +
             $"({state.ComboRemainingSeconds:0.0}s)");
 
-        if (decision == null || string.IsNullOrWhiteSpace(decision.Reason))
+        ImGui.TextDisabled(
+            $"Darkside: {state.GetGauge("darkside_ms") / 1000f:0.0}s | " +
+            $"Dark Arts: {state.GetGauge("dark_arts")} | " +
+            $"Delirium step: {state.GetGauge("delirium_step")}");
+
+        if (decision == null)
         {
             return;
         }
 
-        ImGui.TextWrapped(
-            $"Decision: {decision.Reason}");
+        if (!string.IsNullOrWhiteSpace(decision.Reason))
+        {
+            ImGui.TextWrapped(
+                $"GCD decision: {decision.Reason}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(decision.SuggestionReason))
+        {
+            ImGui.TextWrapped(
+                $"Weave advice: {decision.SuggestionReason}");
+        }
     }
 }
