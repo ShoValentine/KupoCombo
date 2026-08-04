@@ -22,6 +22,8 @@ public sealed class SequenceTrainingPolicy : ITrainingPolicy
 
     public IReadOnlyCollection<uint> TrackedActionIds => Sequence.Actions;
 
+    public bool IgnoreUntrackedActions => false;
+
     public TrainingDecision Evaluate(TrainingState state)
     {
         if (state.AcceptedActionCount >= Sequence.Actions.Count)
