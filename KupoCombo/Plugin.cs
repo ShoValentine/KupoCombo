@@ -41,13 +41,27 @@ public sealed class Plugin : IDalamudPlugin
     internal static IChatGui ChatGui { get; private set; } = null!;
 
     [PluginService]
+    internal static IFramework Framework { get; private set; } = null!;
+
+    [PluginService]
+    internal static IJobGauges JobGauges { get; private set; } = null!;
+
+    [PluginService]
+    internal static IObjectTable ObjectTable { get; private set; } = null!;
+
+    [PluginService]
     internal static IPluginLog Log { get; private set; } = null!;
 
     private const string CommandName = "/kupocombo";
 
+    private static readonly TimeSpan StateRefreshInterval =
+        TimeSpan.FromMilliseconds(100);
+
     private string SequenceDirectory { get; }
 
     private string GuidanceDirectory { get; }
+
+    private DateTime nextStateRefreshUtc = DateTime.MinValue;
 
     public string PromptMooglePath { get; }
 
@@ -98,6 +112,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private ActionWatcher ActionWatcher { get; }
 
+    private TrainingStateReader TrainingStateReader { get; }
+
     public Plugin()
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration
@@ -118,6 +134,11 @@ public sealed class Plugin : IDalamudPlugin
         PromptMooglePath = ResolveAssetPath(
             pluginDirectory,
             "kupoicon.png");
+
+        TrainingStateReader = new TrainingStateReader(
+            JobGauges,
+            ObjectTable,
+            PlayerState);
 
         ActionWatcher = new ActionWatcher(GameInteropProvider);
         ActionWatcher.ActionUsed += OnActionUsed;
@@ -145,6 +166,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi += ToggleMainUi;
 
+        Framework.Update += OnFrameworkUpdate;
         ClientState.ClassJobChanged += OnClassJobChanged;
         ClientState.Login += OnLogin;
         ClientState.Logout += OnLogout;
@@ -168,6 +190,7 @@ public sealed class Plugin : IDalamudPlugin
 
         SelectedSequence = sequence;
         TrainingSession.Start(sequence);
+        RefreshTrainingState();
         OverlayWindow.IsOpen = true;
 
         var sequenceGuidance = GetSelectedSequenceGuidance();
@@ -188,18 +211,19 @@ public sealed class Plugin : IDalamudPlugin
 
         SelectedSequence = null;
         TrainingSession.Start(new DarkKnightComboPolicy());
+        RefreshTrainingState();
         OverlayWindow.IsOpen = true;
 
         ShowPrompt(
             new TrainingPrompt
             {
                 Text =
-                    "Endless DRK combo practice started. " +
-                    "KupoCombo will recalculate the next action after every input.",
+                    "Endless DRK priority practice started. " +
+                    "KupoCombo is now reading live combo and Blood state.",
                 DurationSeconds = 5f
             });
 
-        Log.Information("Started DRK conditional practice preview.");
+        Log.Information("Started DRK conditional priority practice.");
     }
 
     public void StopTraining()
@@ -297,6 +321,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        Framework.Update -= OnFrameworkUpdate;
         ClientState.ClassJobChanged -= OnClassJobChanged;
         ClientState.Login -= OnLogin;
         ClientState.Logout -= OnLogout;
@@ -398,6 +423,16 @@ public sealed class Plugin : IDalamudPlugin
         ChatGui.PrintError(
             "Unknown command. Use /kupocombo or /kupocombo refresh.",
             "KupoCombo");
+    }
+
+    private void OnFrameworkUpdate(IFramework framework)
+    {
+        if (!IsTraining || DateTime.UtcNow < nextStateRefreshUtc)
+        {
+            return;
+        }
+
+        RefreshTrainingState();
     }
 
     private void OnLogin()
@@ -561,11 +596,42 @@ public sealed class Plugin : IDalamudPlugin
         PromptManager.Clear();
         OverlayWindow.IsOpen = false;
         PromptOverlayWindow.IsOpen = false;
+        nextStateRefreshUtc = DateTime.MinValue;
+    }
+
+    private void RefreshTrainingState()
+    {
+        var policy = TrainingSession.Policy;
+
+        if (!TrainingSession.IsActive || policy == null)
+        {
+            return;
+        }
+
+        try
+        {
+            TrainingSession.RefreshState(
+                state => TrainingStateReader.Refresh(state, policy));
+        }
+        catch (Exception exception)
+        {
+            Log.Error(
+                exception,
+                "Failed to refresh the conditional training state.");
+        }
+        finally
+        {
+            nextStateRefreshUtc =
+                DateTime.UtcNow + StateRefreshInterval;
+        }
     }
 
     private void OnActionUsed(uint actionId)
     {
+        RefreshTrainingState();
+
         var result = TrainingSession.ProcessAction(actionId);
+        nextStateRefreshUtc = DateTime.MinValue;
 
         switch (result.Outcome)
         {
