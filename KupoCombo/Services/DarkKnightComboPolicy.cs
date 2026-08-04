@@ -29,6 +29,8 @@ public sealed class DarkKnightComboPolicy : ITrainingPolicy
 
     public IReadOnlyCollection<uint> TrackedActionIds => TrackedActions;
 
+    public bool IgnoreUntrackedActions => true;
+
     public TrainingDecision Evaluate(TrainingState state)
     {
         var nextComboAction = GetNextComboAction(state);
