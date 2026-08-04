@@ -1,3 +1,4 @@
+using System;
 using KupoCombo.Models;
 
 namespace KupoCombo.Services;
@@ -82,6 +83,22 @@ public sealed class TrainingSession
         State = CurrentDecision.IsComplete
             ? TrainingSessionState.Complete
             : TrainingSessionState.Armed;
+    }
+
+    public void RefreshState(Action<TrainingState> refresh)
+    {
+        if (!IsActive || Policy == null)
+        {
+            return;
+        }
+
+        refresh(Snapshot);
+        CurrentDecision = Policy.Evaluate(Snapshot);
+
+        if (CurrentDecision.IsComplete)
+        {
+            State = TrainingSessionState.Complete;
+        }
     }
 
     public void Stop()
