@@ -28,6 +28,8 @@ public sealed class TrainingState
     private readonly List<uint> acceptedActionHistory = new();
     private readonly Dictionary<string, int> gauges =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, double> stateValues =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<uint, StatusSnapshot> statuses = new();
     private readonly Dictionary<uint, CooldownSnapshot> cooldowns = new();
     private readonly Dictionary<uint, uint> adjustedActions = new();
@@ -37,6 +39,8 @@ public sealed class TrainingState
     public int Level { get; private set; }
 
     public int TargetCount { get; private set; } = 1;
+
+    public double CombatTimeSeconds { get; private set; }
 
     public uint NativeComboActionId { get; private set; }
 
@@ -51,6 +55,8 @@ public sealed class TrainingState
     public IReadOnlyList<uint> AcceptedActionHistory => acceptedActionHistory;
 
     public IReadOnlyDictionary<string, int> Gauges => gauges;
+
+    public IReadOnlyDictionary<string, double> StateValues => stateValues;
 
     public IReadOnlyDictionary<uint, StatusSnapshot> Statuses => statuses;
 
@@ -68,6 +74,11 @@ public sealed class TrainingState
         TargetCount = Math.Max(1, targetCount);
     }
 
+    public void SetCombatTimeSeconds(double seconds)
+    {
+        CombatTimeSeconds = Math.Max(0d, seconds);
+    }
+
     public void SetCombo(uint actionId, float remainingSeconds)
     {
         NativeComboActionId = actionId;
@@ -77,6 +88,7 @@ public sealed class TrainingState
     public void SetGauge(string name, int value)
     {
         gauges[name] = value;
+        stateValues[name] = value;
     }
 
     public int GetGauge(string name, int fallback = 0)
@@ -84,6 +96,23 @@ public sealed class TrainingState
         return gauges.TryGetValue(name, out var value)
             ? value
             : fallback;
+    }
+
+    public void SetStateValue(string name, double value)
+    {
+        stateValues[name] = value;
+    }
+
+    public double GetStateValue(string name, double fallback = 0d)
+    {
+        return stateValues.TryGetValue(name, out var value)
+            ? value
+            : fallback;
+    }
+
+    public bool TryGetStateValue(string name, out double value)
+    {
+        return stateValues.TryGetValue(name, out value);
     }
 
     public void ReplaceStatuses(IEnumerable<StatusSnapshot> snapshots)
@@ -160,12 +189,14 @@ public sealed class TrainingState
         Job = job.Trim().ToUpperInvariant();
         Level = Math.Max(0, level);
         TargetCount = 1;
+        CombatTimeSeconds = 0d;
         NativeComboActionId = 0;
         ComboRemainingSeconds = 0f;
         LastObservedActionId = 0;
         LastAcceptedActionId = 0;
         acceptedActionHistory.Clear();
         gauges.Clear();
+        stateValues.Clear();
         statuses.Clear();
         cooldowns.Clear();
         adjustedActions.Clear();
