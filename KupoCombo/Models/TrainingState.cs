@@ -14,13 +14,23 @@ public sealed class CooldownSnapshot
     public bool IsReady => Charges > 0 || RemainingSeconds <= 0f;
 }
 
+public sealed class StatusSnapshot
+{
+    public uint StatusId { get; init; }
+
+    public ushort Param { get; init; }
+
+    public float RemainingSeconds { get; init; }
+}
+
 public sealed class TrainingState
 {
     private readonly List<uint> acceptedActionHistory = new();
     private readonly Dictionary<string, int> gauges =
         new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<uint> statuses = new();
+    private readonly Dictionary<uint, StatusSnapshot> statuses = new();
     private readonly Dictionary<uint, CooldownSnapshot> cooldowns = new();
+    private readonly Dictionary<uint, uint> adjustedActions = new();
 
     public string Job { get; private set; } = string.Empty;
 
@@ -42,9 +52,11 @@ public sealed class TrainingState
 
     public IReadOnlyDictionary<string, int> Gauges => gauges;
 
-    public IReadOnlySet<uint> Statuses => statuses;
+    public IReadOnlyDictionary<uint, StatusSnapshot> Statuses => statuses;
 
     public IReadOnlyDictionary<uint, CooldownSnapshot> Cooldowns => cooldowns;
+
+    public IReadOnlyDictionary<uint, uint> AdjustedActions => adjustedActions;
 
     public void SetLevel(int level)
     {
@@ -74,22 +86,43 @@ public sealed class TrainingState
             : fallback;
     }
 
-    public void ReplaceStatuses(IEnumerable<uint> statusIds)
+    public void ReplaceStatuses(IEnumerable<StatusSnapshot> snapshots)
     {
         statuses.Clear();
 
-        foreach (var statusId in statusIds)
+        foreach (var snapshot in snapshots)
         {
-            if (statusId != 0)
+            if (snapshot.StatusId != 0)
             {
-                statuses.Add(statusId);
+                statuses[snapshot.StatusId] = snapshot;
             }
         }
     }
 
     public bool HasStatus(uint statusId)
     {
-        return statuses.Contains(statusId);
+        return statuses.ContainsKey(statusId);
+    }
+
+    public StatusSnapshot? GetStatus(uint statusId)
+    {
+        return statuses.TryGetValue(statusId, out var status)
+            ? status
+            : null;
+    }
+
+    public int GetStatusStacks(uint statusId)
+    {
+        var status = GetStatus(statusId);
+
+        if (status == null)
+        {
+            return 0;
+        }
+
+        return status.Param == byte.MaxValue
+            ? 3
+            : status.Param;
     }
 
     public void SetCooldown(uint actionId, CooldownSnapshot cooldown)
@@ -102,6 +135,24 @@ public sealed class TrainingState
         return cooldowns.TryGetValue(actionId, out var cooldown)
             ? cooldown
             : null;
+    }
+
+    public void SetAdjustedAction(uint baseActionId, uint adjustedActionId)
+    {
+        adjustedActions[baseActionId] = adjustedActionId;
+    }
+
+    public uint GetAdjustedAction(uint baseActionId, uint fallback = 0)
+    {
+        if (adjustedActions.TryGetValue(baseActionId, out var adjustedActionId) &&
+            adjustedActionId != 0)
+        {
+            return adjustedActionId;
+        }
+
+        return fallback != 0
+            ? fallback
+            : baseActionId;
     }
 
     internal void Begin(string job, int level)
@@ -117,6 +168,7 @@ public sealed class TrainingState
         gauges.Clear();
         statuses.Clear();
         cooldowns.Clear();
+        adjustedActions.Clear();
     }
 
     internal void RecordAcceptedAction(uint actionId)
@@ -124,6 +176,11 @@ public sealed class TrainingState
         LastObservedActionId = actionId;
         LastAcceptedActionId = actionId;
         acceptedActionHistory.Add(actionId);
+    }
+
+    internal void RecordObservedAction(uint actionId)
+    {
+        LastObservedActionId = actionId;
     }
 
     internal void RecordRejectedAction(uint actionId)
