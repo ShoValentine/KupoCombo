@@ -121,22 +121,37 @@ public sealed class OverlayWindow : Window, IDisposable
         }
 
         ImGui.Spacing();
-        ImGui.TextDisabled("Preferred");
+        ImGui.TextDisabled("Next GCD");
 
         DrawActionGrid(
             new[] { decision.PreferredActionId },
             completedCount: 0);
 
-        if (decision.AcceptableActionIds.Count == 0)
+        if (decision.AcceptableActionIds.Count > 0)
+        {
+            ImGui.Spacing();
+            ImGui.TextDisabled("Also acceptable");
+
+            DrawActionGrid(
+                decision.AcceptableActionIds,
+                completedCount: 0);
+        }
+
+        if (decision.SuggestedActionIds.Count == 0)
         {
             return;
         }
 
         ImGui.Spacing();
-        ImGui.TextDisabled("Also acceptable");
+        ImGui.TextDisabled("Suggested weave");
+
+        if (!string.IsNullOrWhiteSpace(decision.SuggestionReason))
+        {
+            ImGui.TextWrapped(decision.SuggestionReason);
+        }
 
         DrawActionGrid(
-            decision.AcceptableActionIds,
+            decision.SuggestedActionIds,
             completedCount: 0);
     }
 
@@ -299,7 +314,7 @@ public sealed class OverlayWindow : Window, IDisposable
 
         ImGui.TextUnformatted(actionName);
         ImGui.TextDisabled(
-            $"Step {step + 1} | Action ID {actionId}");
+            $"Position {step + 1} | Action ID {actionId}");
 
         if (guidance != null)
         {
@@ -343,7 +358,7 @@ public sealed class OverlayWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip(
-                $"Unknown action\nStep: {step + 1}\nAction ID: {actionId}");
+                $"Unknown action\nPosition: {step + 1}\nAction ID: {actionId}");
         }
 
         DrawCentredLabel("Unknown", cellStartX, cellWidth);
