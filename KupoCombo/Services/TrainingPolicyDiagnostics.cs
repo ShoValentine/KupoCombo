@@ -149,7 +149,7 @@ public static class TrainingPolicyDiagnostics
                 "Suggests Edge before MP overcap",
                 mpState,
                 HardSlash,
-                expectedSuggestions: new[] { EdgeOfShadow }));
+                Suggestions: new[] { EdgeOfShadow }));
 
         var darkArtsState = CreateState();
         darkArtsState.SetGauge("dark_arts", 1);
@@ -158,7 +158,7 @@ public static class TrainingPolicyDiagnostics
                 "Suggests the free Dark Arts Edge",
                 darkArtsState,
                 HardSlash,
-                expectedSuggestions: new[] { EdgeOfShadow }));
+                Suggestions: new[] { EdgeOfShadow }));
 
         var deliriumState = CreateState();
         deliriumState.RecordAcceptedAction(HardSlash);
@@ -174,7 +174,7 @@ public static class TrainingPolicyDiagnostics
                 "Suggests Delirium when ready",
                 deliriumState,
                 SyphonStrike,
-                expectedSuggestions: new[] { Delirium }));
+                Suggestions: new[] { Delirium }));
 
         return scenarios;
     }
