@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using KupoCombo.Models;
 
 namespace KupoCombo.Services;
@@ -18,6 +19,8 @@ public sealed class SequenceTrainingPolicy : ITrainingPolicy
     public string Job => Sequence.Job;
 
     public int? ExpectedLength => Sequence.Actions.Count;
+
+    public IReadOnlyCollection<uint> TrackedActionIds => Sequence.Actions;
 
     public TrainingDecision Evaluate(TrainingState state)
     {
