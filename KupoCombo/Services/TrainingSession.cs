@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using KupoCombo.Models;
 
 namespace KupoCombo.Services;
@@ -16,6 +17,7 @@ public enum TrainingActionOutcome
     Ignored,
     Correct,
     Acceptable,
+    Suggested,
     Incorrect,
     Completed
 }
@@ -121,13 +123,34 @@ public sealed class TrainingSession
             return Ignored(actionId);
         }
 
-        if (Policy.IgnoreUntrackedActions &&
-            !IsTrackedAction(Policy, actionId))
+        var decision = CurrentDecision;
+
+        if (decision.IsSuggested(actionId))
+        {
+            Snapshot.RecordObservedAction(actionId);
+            State = TrainingSessionState.Running;
+            CurrentDecision = Policy.Evaluate(Snapshot);
+
+            return new TrainingActionResult
+            {
+                Outcome = TrainingActionOutcome.Suggested,
+                UsedActionId = actionId,
+                ExpectedActionId = decision.PreferredActionId,
+                CompletedStep = CurrentStep,
+                DecisionReason = decision.SuggestionReason
+            };
+        }
+
+        if (Contains(Policy.AdvisoryActionIds, actionId))
         {
             return Ignored(actionId);
         }
 
-        var decision = CurrentDecision;
+        if (Policy.IgnoreUntrackedActions &&
+            !Contains(Policy.TrackedActionIds, actionId))
+        {
+            return Ignored(actionId);
+        }
 
         if (!decision.IsActionAccepted(actionId))
         {
@@ -191,13 +214,13 @@ public sealed class TrainingSession
         };
     }
 
-    private static bool IsTrackedAction(
-        ITrainingPolicy policy,
+    private static bool Contains(
+        IReadOnlyCollection<uint> actionIds,
         uint actionId)
     {
-        foreach (var trackedActionId in policy.TrackedActionIds)
+        foreach (var candidateActionId in actionIds)
         {
-            if (trackedActionId == actionId)
+            if (candidateActionId == actionId)
             {
                 return true;
             }
