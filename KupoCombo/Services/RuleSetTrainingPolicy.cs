@@ -117,7 +117,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         TrainingState state,
         out RuleMatch match)
     {
-        match = default;
+        match = default!;
 
         return rule.Type switch
         {
@@ -148,7 +148,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         TrainingState state,
         out RuleMatch match)
     {
-        match = default;
+        match = default!;
         var combo = context.GetCombo(rule.Combo);
 
         if (state.Level < combo.MinimumLevel ||
@@ -165,7 +165,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         TrainingState state,
         out RuleMatch match)
     {
-        match = default;
+        match = default!;
         var baseAction = context.GetAction(rule.Action);
         var adjustedActionId = state.GetAdjustedAction(
             baseAction.ActionId,
@@ -184,7 +184,6 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
             match = CreateMatch(
                 rule,
                 adjustedActionId,
-                state,
                 Array.Empty<uint>());
             return true;
         }
@@ -197,7 +196,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         TrainingState state,
         out RuleMatch match)
     {
-        match = default;
+        match = default!;
         var currentValue = context.GetStateValue(rule.Resource, state);
         var threshold = rule.Threshold ?? double.MaxValue;
         var nextComboAlias = FindNextComboAction(state);
@@ -242,7 +241,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         TrainingState state,
         out RuleMatch match)
     {
-        match = default;
+        match = default!;
         var cooldown = context.GetCooldown(rule.Cooldown, state);
 
         if (cooldown == null ||
@@ -259,7 +258,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         TrainingState state,
         out RuleMatch match)
     {
-        match = default;
+        match = default!;
         var status = state.GetStatus(context.GetStatusId(rule.Status));
         var minimumRemaining = rule.MinimumRemainingSeconds ?? 0d;
 
@@ -276,7 +275,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         TrainingState state,
         out RuleMatch match)
     {
-        match = default;
+        match = default!;
 
         if (state.GetStatusStacks(context.GetStatusId(rule.Status)) <= 0)
         {
@@ -291,7 +290,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         TrainingState state,
         out RuleMatch match)
     {
-        match = default;
+        match = default!;
 
         if (!state.HasStatus(context.GetStatusId(rule.Status)))
         {
@@ -306,7 +305,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         TrainingState state,
         out RuleMatch match)
     {
-        match = default;
+        match = default!;
 
         if (context.GetCooldown(rule.Cooldown, state)?.IsReady != true)
         {
@@ -331,7 +330,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         out RuleMatch match,
         IEnumerable<uint>? dynamicAcceptableActions = null)
     {
-        match = default;
+        match = default!;
 
         if (!context.IsActionAvailable(actionAlias, state.Level))
         {
@@ -361,7 +360,6 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         match = CreateMatch(
             rule,
             context.GetActionId(actionAlias, state),
-            state,
             acceptableActions);
         return true;
     }
@@ -369,7 +367,6 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
     private RuleMatch CreateMatch(
         PolicyRuleDefinition rule,
         uint actionId,
-        TrainingState state,
         IReadOnlyList<uint> acceptableActions)
     {
         var filteredAcceptableActions = acceptableActions
@@ -464,7 +461,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
         }
     }
 
-    private readonly record struct RuleMatch(
+    private sealed record RuleMatch(
         uint ActionId,
         IReadOnlyList<uint> AcceptableActionIds,
         string Reason,
