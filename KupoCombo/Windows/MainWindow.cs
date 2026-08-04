@@ -40,6 +40,8 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.TextDisabled($"Current job: {currentJob}");
         ImGui.Spacing();
 
+        DrawDynamicPracticePreview();
+
         if (plugin.Sequences.Count == 0)
         {
             ImGui.TextWrapped(
@@ -139,6 +141,32 @@ public sealed class MainWindow : Window, IDisposable
         }
     }
 
+    private void DrawDynamicPracticePreview()
+    {
+        if (!plugin.CurrentJob.Equals("DRK", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        ImGui.Text("Conditional practice preview");
+        ImGui.TextWrapped(
+            "Runs the DRK core combo indefinitely and recalculates the next " +
+            "recommended action after every accepted input.");
+
+        ImGui.Spacing();
+
+        if (ImGui.Button(
+                "Start Endless DRK Combo",
+                new Vector2(245, 0)))
+        {
+            plugin.StartDynamicPractice();
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+    }
+
     private void DrawTrainingOptions()
     {
         var showPrompts = plugin.Configuration.ShowTrainingPrompts;
@@ -187,11 +215,26 @@ public sealed class MainWindow : Window, IDisposable
                 return;
 
             case TrainingSessionState.Armed:
+                if (plugin.IsDynamicPractice)
+                {
+                    ImGui.Text(
+                        $"Armed | {plugin.SelectedSequenceName}");
+                    return;
+                }
+
                 ImGui.Text(
                     $"Armed | Begin with step 1/{plugin.CurrentSequenceLength}");
                 return;
 
             case TrainingSessionState.Running:
+                if (plugin.IsDynamicPractice)
+                {
+                    ImGui.Text(
+                        $"Practising {plugin.SelectedSequenceName} | " +
+                        $"Accepted actions: {plugin.CurrentStep}");
+                    return;
+                }
+
                 ImGui.Text(
                     $"Practising {plugin.SelectedSequenceName} | " +
                     $"Next step: {plugin.CurrentStep + 1}" +
