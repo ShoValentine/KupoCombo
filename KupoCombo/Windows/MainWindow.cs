@@ -130,7 +130,7 @@ public sealed class MainWindow : Window, IDisposable
                 "Run DRK Policy Self-Test",
                 new Vector2(245, 0)))
         {
-            plugin.RunDarkKnightPolicyDiagnostics();
+            RunDarkKnightPolicyDiagnostics();
         }
 
         if (ImGui.Button(
@@ -288,6 +288,42 @@ public sealed class MainWindow : Window, IDisposable
         {
             ImGui.TextWrapped(
                 $"Weave advice: {decision.SuggestionReason}");
+        }
+    }
+
+    private static void RunDarkKnightPolicyDiagnostics()
+    {
+        var report = TrainingPolicyDiagnostics.RunDarkKnight();
+
+        foreach (var result in report.Results)
+        {
+            var message =
+                $"{(result.Passed ? "PASS" : "FAIL")}: " +
+                $"{result.Name} - {result.Detail}";
+
+            if (result.Passed)
+            {
+                Plugin.Log.Information(message);
+            }
+            else
+            {
+                Plugin.Log.Error(message);
+            }
+        }
+
+        var summary =
+            $"DRK policy self-test: {report.PassedCount} passed, " +
+            $"{report.FailedCount} failed.";
+
+        if (report.Passed)
+        {
+            Plugin.ChatGui.Print(summary, "KupoCombo");
+        }
+        else
+        {
+            Plugin.ChatGui.PrintError(
+                summary + " Check /xllog for details.",
+                "KupoCombo");
         }
     }
 }
