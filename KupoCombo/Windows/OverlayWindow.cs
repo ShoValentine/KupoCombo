@@ -121,9 +121,22 @@ public sealed class OverlayWindow : Window, IDisposable
         }
 
         ImGui.Spacing();
+        ImGui.TextDisabled("Preferred");
 
         DrawActionGrid(
             new[] { decision.PreferredActionId },
+            completedCount: 0);
+
+        if (decision.AcceptableActionIds.Count == 0)
+        {
+            return;
+        }
+
+        ImGui.Spacing();
+        ImGui.TextDisabled("Also acceptable");
+
+        DrawActionGrid(
+            decision.AcceptableActionIds,
             completedCount: 0);
     }
 
