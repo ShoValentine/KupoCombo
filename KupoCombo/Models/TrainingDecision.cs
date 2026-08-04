@@ -16,7 +16,12 @@ public sealed class TrainingDecision
     public IReadOnlyList<uint> AcceptableActionIds { get; init; } =
         Array.Empty<uint>();
 
+    public IReadOnlyList<uint> SuggestedActionIds { get; init; } =
+        Array.Empty<uint>();
+
     public string Reason { get; init; } = string.Empty;
+
+    public string SuggestionReason { get; init; } = string.Empty;
 
     public TrainingMistakeResponse MistakeResponse { get; init; } =
         TrainingMistakeResponse.ResetProgress;
@@ -38,6 +43,19 @@ public sealed class TrainingDecision
         foreach (var acceptableActionId in AcceptableActionIds)
         {
             if (actionId == acceptableActionId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool IsSuggested(uint actionId)
+    {
+        foreach (var suggestedActionId in SuggestedActionIds)
+        {
+            if (actionId == suggestedActionId)
             {
                 return true;
             }
