@@ -14,6 +14,7 @@ public enum TrainingActionOutcome
 {
     Ignored,
     Correct,
+    Acceptable,
     Incorrect,
     Completed
 }
@@ -27,17 +28,27 @@ public sealed class TrainingActionResult
     public uint ExpectedActionId { get; init; }
 
     public int CompletedStep { get; init; }
+
+    public bool WasPreferred { get; init; }
+
+    public string DecisionReason { get; init; } = string.Empty;
 }
 
 public sealed class TrainingSession
 {
-    public SequenceDefinition? Sequence { get; private set; }
+    public ITrainingPolicy? Policy { get; private set; }
+
+    public SequenceDefinition? Sequence =>
+        (Policy as SequenceTrainingPolicy)?.Sequence;
+
+    public TrainingState Snapshot { get; } = new();
+
+    public TrainingDecision? CurrentDecision { get; private set; }
 
     public TrainingSessionState State { get; private set; } =
         TrainingSessionState.Stopped;
 
-    // Number of sequence actions already completed.
-    public int CurrentStep { get; private set; }
+    public int CurrentStep => Snapshot.AcceptedActionCount;
 
     public uint LastIncorrectActionId { get; private set; }
 
@@ -50,22 +61,34 @@ public sealed class TrainingSession
     public bool IsComplete =>
         State == TrainingSessionState.Complete;
 
+    public bool IsEndless =>
+        Policy != null && !Policy.ExpectedLength.HasValue;
+
     public int Length =>
-        Sequence?.Actions.Count ?? 0;
+        Policy?.ExpectedLength ?? 0;
 
     public void Start(SequenceDefinition sequence)
     {
-        Sequence = sequence;
-        CurrentStep = 0;
+        Start(new SequenceTrainingPolicy(sequence));
+    }
+
+    public void Start(ITrainingPolicy policy, int level = 0)
+    {
+        Policy = policy;
+        Snapshot.Begin(policy.Job, level);
         LastIncorrectActionId = 0;
         LastExpectedActionId = 0;
-        State = TrainingSessionState.Armed;
+        CurrentDecision = policy.Evaluate(Snapshot);
+        State = CurrentDecision.IsComplete
+            ? TrainingSessionState.Complete
+            : TrainingSessionState.Armed;
     }
 
     public void Stop()
     {
-        Sequence = null;
-        CurrentStep = 0;
+        Policy = null;
+        CurrentDecision = null;
+        Snapshot.Clear();
         LastIncorrectActionId = 0;
         LastExpectedActionId = 0;
         State = TrainingSessionState.Stopped;
@@ -74,8 +97,9 @@ public sealed class TrainingSession
     public TrainingActionResult ProcessAction(uint actionId)
     {
         if (!IsActive ||
-            Sequence == null ||
-            CurrentStep >= Sequence.Actions.Count)
+            Policy == null ||
+            CurrentDecision == null ||
+            CurrentDecision.IsComplete)
         {
             return new TrainingActionResult
             {
@@ -84,47 +108,67 @@ public sealed class TrainingSession
             };
         }
 
-        var expectedActionId = Sequence.Actions[CurrentStep];
+        var decision = CurrentDecision;
 
-        if (actionId != expectedActionId)
+        if (!decision.IsActionAccepted(actionId))
         {
             LastIncorrectActionId = actionId;
-            LastExpectedActionId = expectedActionId;
-            CurrentStep = 0;
-            State = TrainingSessionState.Armed;
+            LastExpectedActionId = decision.PreferredActionId;
+            Snapshot.RecordRejectedAction(actionId);
+
+            if (decision.MistakeResponse == TrainingMistakeResponse.ResetProgress)
+            {
+                Snapshot.ResetProgress();
+                State = TrainingSessionState.Armed;
+            }
+            else
+            {
+                State = TrainingSessionState.Running;
+            }
+
+            CurrentDecision = Policy.Evaluate(Snapshot);
 
             return new TrainingActionResult
             {
                 Outcome = TrainingActionOutcome.Incorrect,
                 UsedActionId = actionId,
-                ExpectedActionId = expectedActionId,
-                CompletedStep = 0
+                ExpectedActionId = decision.PreferredActionId,
+                CompletedStep = CurrentStep,
+                DecisionReason = decision.Reason
             };
         }
 
-        State = TrainingSessionState.Running;
-        CurrentStep++;
+        var wasPreferred = decision.IsPreferred(actionId);
 
-        if (CurrentStep >= Sequence.Actions.Count)
+        Snapshot.RecordAcceptedAction(actionId);
+        State = TrainingSessionState.Running;
+        CurrentDecision = Policy.Evaluate(Snapshot);
+
+        if (CurrentDecision.IsComplete)
         {
-            CurrentStep = Sequence.Actions.Count;
             State = TrainingSessionState.Complete;
 
             return new TrainingActionResult
             {
                 Outcome = TrainingActionOutcome.Completed,
                 UsedActionId = actionId,
-                ExpectedActionId = expectedActionId,
-                CompletedStep = CurrentStep
+                ExpectedActionId = decision.PreferredActionId,
+                CompletedStep = CurrentStep,
+                WasPreferred = wasPreferred,
+                DecisionReason = decision.Reason
             };
         }
 
         return new TrainingActionResult
         {
-            Outcome = TrainingActionOutcome.Correct,
+            Outcome = wasPreferred
+                ? TrainingActionOutcome.Correct
+                : TrainingActionOutcome.Acceptable,
             UsedActionId = actionId,
-            ExpectedActionId = expectedActionId,
-            CompletedStep = CurrentStep
+            ExpectedActionId = decision.PreferredActionId,
+            CompletedStep = CurrentStep,
+            WasPreferred = wasPreferred,
+            DecisionReason = decision.Reason
         };
     }
 }
