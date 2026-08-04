@@ -92,19 +92,44 @@ public sealed class OverlayWindow : Window, IDisposable
 
         var selectedSequence = plugin.SelectedSequence;
 
-        if (selectedSequence == null)
+        if (selectedSequence != null)
+        {
+            ImGui.Text(selectedSequence.DisplayName);
+            ImGui.Spacing();
+
+            DrawActionGrid(
+                selectedSequence.Actions,
+                plugin.CurrentStep);
+            return;
+        }
+
+        var decision = plugin.TrainingSession.CurrentDecision;
+
+        if (!plugin.IsDynamicPractice ||
+            decision == null ||
+            decision.IsComplete)
         {
             ImGui.Text("No sequence selected.");
             return;
         }
 
-        ImGui.Text(selectedSequence.DisplayName);
+        ImGui.Text(plugin.SelectedSequenceName);
+
+        if (!string.IsNullOrWhiteSpace(decision.Reason))
+        {
+            ImGui.TextWrapped(decision.Reason);
+        }
+
         ImGui.Spacing();
 
-        DrawActionGrid(selectedSequence.Actions);
+        DrawActionGrid(
+            new[] { decision.PreferredActionId },
+            completedCount: 0);
     }
 
-    private void DrawActionGrid(IReadOnlyList<uint> actions)
+    private void DrawActionGrid(
+        IReadOnlyList<uint> actions,
+        int completedCount)
     {
         var globalScale = ImGuiHelpers.GlobalScale;
         var iconScale = Math.Clamp(
@@ -154,7 +179,7 @@ public sealed class OverlayWindow : Window, IDisposable
                 gridStartY + row * verticalAdvance);
 
             var actionId = actions[step];
-            var stepCompleted = step < plugin.CurrentStep;
+            var stepCompleted = step < completedCount;
 
             DrawActionCell(
                 actionId,
