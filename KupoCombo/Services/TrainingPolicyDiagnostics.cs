@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using KupoCombo.Models;
 
 namespace KupoCombo.Services;
@@ -54,77 +56,109 @@ public static class TrainingPolicyDiagnostics
 
     public static PolicyDiagnosticReport RunDarkKnight()
     {
-        var report = new PolicyDiagnosticReport();
-        var policy = new DarkKnightComboPolicy();
+        return RunDarkKnight(new DarkKnightComboPolicy());
+    }
 
-        CheckPreferred(
-            report,
-            policy,
-            "Starts the Souleater combo",
-            CreateState(),
-            HardSlash);
+    public static PolicyDiagnosticReport RunDarkKnight(
+        RulePolicyDefinition definition)
+    {
+        return RunDarkKnight(new RuleSetTrainingPolicy(definition));
+    }
+
+    public static PolicyDiagnosticReport RunDarkKnight(
+        ITrainingPolicy policy)
+    {
+        var report = new PolicyDiagnosticReport();
+        var scenarios = CreateScenarios();
+
+        foreach (var scenario in scenarios)
+        {
+            var decision = policy.Evaluate(scenario.State);
+            var passed = decision.PreferredActionId == scenario.ExpectedPreferred &&
+                scenario.ExpectedAcceptable.All(
+                    actionId => Contains(decision.AcceptableActionIds, actionId)) &&
+                scenario.ExpectedSuggestions.All(
+                    actionId => Contains(decision.SuggestedActionIds, actionId));
+
+            report.Add(
+                scenario.Name,
+                passed,
+                $"Preferred {decision.PreferredActionId}; " +
+                $"acceptable [{Join(decision.AcceptableActionIds)}]; " +
+                $"suggestions [{Join(decision.SuggestedActionIds)}].");
+        }
+
+        AddLegacyParityResult(report, policy, scenarios);
+        return report;
+    }
+
+    private static IReadOnlyList<DiagnosticScenario> CreateScenarios()
+    {
+        var scenarios = new List<DiagnosticScenario>();
+
+        scenarios.Add(
+            new DiagnosticScenario(
+                "Starts the Souleater combo",
+                CreateState(),
+                HardSlash));
 
         var syphonState = CreateState();
         syphonState.SetCombo(HardSlash, 20f);
-        CheckPreferred(
-            report,
-            policy,
-            "Continues native combo state",
-            syphonState,
-            SyphonStrike);
+        scenarios.Add(
+            new DiagnosticScenario(
+                "Continues native combo state",
+                syphonState,
+                SyphonStrike));
 
         var overcapState = CreateState();
         overcapState.SetGauge("blood", 90);
         overcapState.SetCombo(SyphonStrike, 20f);
-        CheckPreferred(
-            report,
-            policy,
-            "Prevents Souleater Blood overcap",
-            overcapState,
-            Bloodspiller);
+        scenarios.Add(
+            new DiagnosticScenario(
+                "Prevents Souleater Blood overcap",
+                overcapState,
+                Bloodspiller));
 
         var safeContinuationState = CreateState();
         safeContinuationState.SetGauge("blood", 90);
         safeContinuationState.SetCombo(HardSlash, 20f);
-        var safeDecision = policy.Evaluate(safeContinuationState);
-        report.Add(
-            "Allows safe combo continuation near Blood cap",
-            safeDecision.PreferredActionId == Bloodspiller &&
-            Contains(safeDecision.AcceptableActionIds, SyphonStrike),
-            $"Preferred {safeDecision.PreferredActionId}; " +
-            $"expected Bloodspiller with Syphon Strike acceptable.");
+        scenarios.Add(
+            new DiagnosticScenario(
+                "Allows safe combo continuation near Blood cap",
+                safeContinuationState,
+                Bloodspiller,
+                new[] { SyphonStrike }));
 
-        CheckAdjustedDeliriumAction(
-            report,
-            policy,
-            "Recognises Scarlet Delirium",
-            ScarletDelirium);
-        CheckAdjustedDeliriumAction(
-            report,
-            policy,
-            "Recognises Comeuppance",
-            Comeuppance);
-        CheckAdjustedDeliriumAction(
-            report,
-            policy,
-            "Recognises Torcleaver",
-            Torcleaver);
+        scenarios.Add(
+            CreateAdjustedDeliriumScenario(
+                "Recognises Scarlet Delirium",
+                ScarletDelirium));
+        scenarios.Add(
+            CreateAdjustedDeliriumScenario(
+                "Recognises Comeuppance",
+                Comeuppance));
+        scenarios.Add(
+            CreateAdjustedDeliriumScenario(
+                "Recognises Torcleaver",
+                Torcleaver));
 
         var mpState = CreateState();
         mpState.SetGauge("mp", 9000);
-        var mpDecision = policy.Evaluate(mpState);
-        report.Add(
-            "Suggests Edge before MP overcap",
-            Contains(mpDecision.SuggestedActionIds, EdgeOfShadow),
-            $"Suggestions: {Join(mpDecision.SuggestedActionIds)}");
+        scenarios.Add(
+            new DiagnosticScenario(
+                "Suggests Edge before MP overcap",
+                mpState,
+                HardSlash,
+                expectedSuggestions: new[] { EdgeOfShadow }));
 
         var darkArtsState = CreateState();
         darkArtsState.SetGauge("dark_arts", 1);
-        var darkArtsDecision = policy.Evaluate(darkArtsState);
-        report.Add(
-            "Suggests the free Dark Arts Edge",
-            Contains(darkArtsDecision.SuggestedActionIds, EdgeOfShadow),
-            $"Suggestions: {Join(darkArtsDecision.SuggestedActionIds)}");
+        scenarios.Add(
+            new DiagnosticScenario(
+                "Suggests the free Dark Arts Edge",
+                darkArtsState,
+                HardSlash,
+                expectedSuggestions: new[] { EdgeOfShadow }));
 
         var deliriumState = CreateState();
         deliriumState.RecordAcceptedAction(HardSlash);
@@ -135,13 +169,27 @@ public static class TrainingPolicyDiagnostics
                 Charges = 1,
                 MaximumCharges = 1
             });
-        var deliriumDecision = policy.Evaluate(deliriumState);
-        report.Add(
-            "Suggests Delirium when ready",
-            Contains(deliriumDecision.SuggestedActionIds, Delirium),
-            $"Suggestions: {Join(deliriumDecision.SuggestedActionIds)}");
+        scenarios.Add(
+            new DiagnosticScenario(
+                "Suggests Delirium when ready",
+                deliriumState,
+                SyphonStrike,
+                expectedSuggestions: new[] { Delirium }));
 
-        return report;
+        return scenarios;
+    }
+
+    private static DiagnosticScenario CreateAdjustedDeliriumScenario(
+        string name,
+        uint adjustedActionId)
+    {
+        var state = CreateState();
+        state.SetAdjustedAction(Bloodspiller, adjustedActionId);
+
+        return new DiagnosticScenario(
+            name,
+            state,
+            adjustedActionId);
     }
 
     private static TrainingState CreateState()
@@ -166,30 +214,51 @@ public static class TrainingPolicyDiagnostics
         return state;
     }
 
-    private static void CheckPreferred(
+    private static void AddLegacyParityResult(
         PolicyDiagnosticReport report,
         ITrainingPolicy policy,
-        string name,
-        TrainingState state,
-        uint expectedActionId)
+        IReadOnlyList<DiagnosticScenario> scenarios)
     {
-        var decision = policy.Evaluate(state);
+        if (policy is LegacyDarkKnightComboPolicy)
+        {
+            return;
+        }
+
+        var legacy = new LegacyDarkKnightComboPolicy();
+        var mismatches = new List<string>();
+
+        foreach (var scenario in scenarios)
+        {
+            var current = policy.Evaluate(scenario.State);
+            var previous = legacy.Evaluate(scenario.State);
+
+            if (current.PreferredActionId != previous.PreferredActionId ||
+                !SameSet(
+                    current.AcceptableActionIds,
+                    previous.AcceptableActionIds) ||
+                !SameSet(
+                    current.SuggestedActionIds,
+                    previous.SuggestedActionIds))
+            {
+                mismatches.Add(scenario.Name);
+            }
+        }
 
         report.Add(
-            name,
-            decision.PreferredActionId == expectedActionId,
-            $"Preferred {decision.PreferredActionId}; expected {expectedActionId}.");
+            "Matches the preserved legacy policy",
+            mismatches.Count == 0,
+            mismatches.Count == 0
+                ? $"All {scenarios.Count} reference scenarios match."
+                : $"Mismatches: {string.Join(", ", mismatches)}.");
     }
 
-    private static void CheckAdjustedDeliriumAction(
-        PolicyDiagnosticReport report,
-        ITrainingPolicy policy,
-        string name,
-        uint adjustedActionId)
+    private static bool SameSet(
+        IReadOnlyList<uint> left,
+        IReadOnlyList<uint> right)
     {
-        var state = CreateState();
-        state.SetAdjustedAction(Bloodspiller, adjustedActionId);
-        CheckPreferred(report, policy, name, state, adjustedActionId);
+        return left.Count == right.Count &&
+            left.OrderBy(value => value)
+                .SequenceEqual(right.OrderBy(value => value));
     }
 
     private static bool Contains(
@@ -212,5 +281,19 @@ public static class TrainingPolicyDiagnostics
         return actionIds.Count == 0
             ? "none"
             : string.Join(", ", actionIds);
+    }
+
+    private sealed record DiagnosticScenario(
+        string Name,
+        TrainingState State,
+        uint ExpectedPreferred,
+        IReadOnlyList<uint>? Acceptable = null,
+        IReadOnlyList<uint>? Suggestions = null)
+    {
+        public IReadOnlyList<uint> ExpectedAcceptable =>
+            Acceptable ?? Array.Empty<uint>();
+
+        public IReadOnlyList<uint> ExpectedSuggestions =>
+            Suggestions ?? Array.Empty<uint>();
     }
 }
