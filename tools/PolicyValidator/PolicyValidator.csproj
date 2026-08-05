@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\KupoCombo\Models\PveActionCatalogDefinition.cs"
+             Link="Models\PveActionCatalogDefinition.cs" />
     <Compile Include="..\..\KupoCombo\Models\RulePolicyDefinition.cs"
              Link="Models\RulePolicyDefinition.cs" />
     <Compile Include="..\..\KupoCombo\Models\TrainingDecision.cs"
@@ -25,6 +27,8 @@
              Link="Services\PolicyConditionEvaluator.cs" />
     <Compile Include="..\..\KupoCombo\Services\PolicyEvaluationContext.cs"
              Link="Services\PolicyEvaluationContext.cs" />
+    <Compile Include="..\..\KupoCombo\Services\PveActionCatalogLoader.cs"
+             Link="Services\PveActionCatalogLoader.cs" />
     <Compile Include="..\..\KupoCombo\Services\RulePolicyLoader.cs"
              Link="Services\RulePolicyLoader.cs" />
     <Compile Include="..\..\KupoCombo\Services\RuleSetTrainingPolicy.cs"
