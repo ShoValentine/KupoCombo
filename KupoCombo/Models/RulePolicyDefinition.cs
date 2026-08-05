@@ -67,6 +67,32 @@ public sealed class PolicyActionDefinition
     public int? MaximumLevel { get; set; }
 
     public string AdjustedFrom { get; set; } = string.Empty;
+
+    public List<PolicyForecastEffectDefinition> ForecastEffects { get; set; } =
+        new();
+}
+
+public sealed class PolicyForecastEffectDefinition
+{
+    public PolicyForecastEffectType Type { get; set; }
+
+    public string State { get; set; } = string.Empty;
+
+    public double Value { get; set; }
+
+    public double? Minimum { get; set; }
+
+    public double? Maximum { get; set; }
+
+    public string Status { get; set; } = string.Empty;
+
+    public float DurationSeconds { get; set; }
+
+    public int Stacks { get; set; } = 1;
+
+    public string Action { get; set; } = string.Empty;
+
+    public string AdjustedAction { get; set; } = string.Empty;
 }
 
 public sealed class PolicyStateInputDefinition
@@ -170,6 +196,17 @@ public enum PolicyActionRole
     Graded,
     Advisory,
     Observed
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<PolicyForecastEffectType>))]
+public enum PolicyForecastEffectType
+{
+    AddStateValue,
+    SetStateValue,
+    AddStatus,
+    RemoveStatus,
+    SetAdjustedAction,
+    ResetAdjustedAction
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<PolicyStateValueKind>))]
