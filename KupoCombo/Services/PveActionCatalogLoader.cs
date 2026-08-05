@@ -55,6 +55,10 @@ public static class PveActionCatalogLoader
                     $"but policy '{policy.Id}' uses it as {policy.Job}.");
             }
 
+            var policyEffects = action.ForecastEffects
+                .Select(CloneEffect)
+                .ToList();
+
             if (string.IsNullOrWhiteSpace(action.DisplayName))
             {
                 action.DisplayName = entry.Name;
@@ -73,9 +77,15 @@ public static class PveActionCatalogLoader
             action.Potency = entry.Potency;
             action.ComboPotency = entry.ComboPotency;
             action.MpCost = entry.MpCost;
-            action.ForecastEffects = entry.ForecastEffects
-                .Select(CloneEffect)
-                .ToList();
+
+            var catalogueEffects = entry.ForecastEffects
+                .Select(CloneEffect);
+
+            action.ForecastEffects = action.OverrideCatalogueForecastEffects
+                ? policyEffects
+                : catalogueEffects
+                    .Concat(policyEffects)
+                    .ToList();
 
             if (string.IsNullOrWhiteSpace(action.AdjustedFrom) &&
                 entry.AdjustedFromActionId.HasValue)
@@ -200,7 +210,109 @@ public static class PveActionCatalogLoader
                         "reset action");
                     break;
             }
+
+            ValidateEffectConditions(
+                policy,
+                actionAlias,
+                effect.Conditions);
         }
+    }
+
+    private static void ValidateEffectConditions(
+        RulePolicyDefinition policy,
+        string actionAlias,
+        PolicyConditionSet conditions)
+    {
+        foreach (var condition in conditions.All
+                     .Concat(conditions.Any)
+                     .Concat(conditions.None))
+        {
+            if (condition.Value.ValueKind == JsonValueKind.Undefined)
+            {
+                throw new InvalidDataException(
+                    $"A forecast effect for action '{actionAlias}' in policy " +
+                    $"'{policy.Id}' contains a condition without a value.");
+            }
+
+            switch (condition.Source)
+            {
+                case PolicyConditionSource.StateValue:
+                    RequireKey(
+                        policy.StateInputs.Keys,
+                        condition.Key,
+                        policy,
+                        actionAlias,
+                        "condition state input");
+                    break;
+
+                case PolicyConditionSource.StatusActive:
+                case PolicyConditionSource.StatusStacks:
+                case PolicyConditionSource.StatusRemainingSeconds:
+                    RequireKey(
+                        policy.Statuses.Keys,
+                        condition.Key,
+                        policy,
+                        actionAlias,
+                        "condition status");
+                    break;
+
+                case PolicyConditionSource.CooldownReady:
+                case PolicyConditionSource.CooldownCharges:
+                case PolicyConditionSource.AdjustedAction:
+                    RequireKey(
+                        policy.Actions.Keys,
+                        condition.Key,
+                        policy,
+                        actionAlias,
+                        "condition action");
+                    break;
+
+                case PolicyConditionSource.ComboAction:
+                case PolicyConditionSource.LastAction:
+                    ValidateActionConditionValue(
+                        policy,
+                        actionAlias,
+                        condition);
+                    break;
+
+                case PolicyConditionSource.Level:
+                case PolicyConditionSource.ComboRemainingSeconds:
+                case PolicyConditionSource.TargetCount:
+                case PolicyConditionSource.CombatTimeSeconds:
+                case PolicyConditionSource.AcceptedActionCount:
+                    break;
+
+                default:
+                    throw new InvalidDataException(
+                        $"A forecast effect for action '{actionAlias}' in policy " +
+                        $"'{policy.Id}' uses an unsupported condition source.");
+            }
+        }
+    }
+
+    private static void ValidateActionConditionValue(
+        RulePolicyDefinition policy,
+        string actionAlias,
+        PolicyConditionDefinition condition)
+    {
+        if (condition.Value.ValueKind == JsonValueKind.Number)
+        {
+            return;
+        }
+
+        if (condition.Value.ValueKind != JsonValueKind.String)
+        {
+            throw new InvalidDataException(
+                $"A forecast effect for action '{actionAlias}' in policy " +
+                $"'{policy.Id}' uses a non-action condition value.");
+        }
+
+        RequireKey(
+            policy.Actions.Keys,
+            condition.Value.GetString() ?? string.Empty,
+            policy,
+            actionAlias,
+            "condition action value");
     }
 
     private static void RequireKey(
@@ -235,7 +347,31 @@ public static class PveActionCatalogLoader
             DurationSeconds = effect.DurationSeconds,
             Stacks = effect.Stacks,
             Action = effect.Action,
-            AdjustedAction = effect.AdjustedAction
+            AdjustedAction = effect.AdjustedAction,
+            Conditions = CloneConditions(effect.Conditions)
+        };
+    }
+
+    private static PolicyConditionSet CloneConditions(
+        PolicyConditionSet conditions)
+    {
+        return new PolicyConditionSet
+        {
+            All = conditions.All.Select(CloneCondition).ToList(),
+            Any = conditions.Any.Select(CloneCondition).ToList(),
+            None = conditions.None.Select(CloneCondition).ToList()
+        };
+    }
+
+    private static PolicyConditionDefinition CloneCondition(
+        PolicyConditionDefinition condition)
+    {
+        return new PolicyConditionDefinition
+        {
+            Source = condition.Source,
+            Key = condition.Key,
+            Operator = condition.Operator,
+            Value = condition.Value.Clone()
         };
     }
 }
