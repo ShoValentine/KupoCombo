@@ -12,11 +12,8 @@ const uint EdgeOfShadow = 16470;
 const uint LivingShadow = 16472;
 const uint CarveAndSpit = 3639;
 const uint SaltedEarth = 3643;
-const uint SaltAndDarkness = 25755;
 const uint Shadowbringer = 25757;
 const uint ScarletDelirium = 36928;
-const uint Comeuppance = 36929;
-const uint Torcleaver = 36930;
 const uint Disesteem = 36932;
 
 const uint SplitShot = 2866;
@@ -61,6 +58,25 @@ if (!Directory.Exists(policyDirectory))
     return 2;
 }
 
+var dataDirectory = Directory.GetParent(policyDirectory);
+
+if (dataDirectory == null)
+{
+    Console.Error.WriteLine(
+        $"Could not resolve the Data directory above {policyDirectory}.");
+    return 2;
+}
+
+var cataloguePath = Path.Combine(
+    dataDirectory.FullName,
+    "Actions",
+    "pve-actions.json");
+var catalogue = PveActionCatalogLoader.Load(cataloguePath);
+
+Console.WriteLine(
+    $"Validated PvE action catalogue {catalogue.GameVersion}: " +
+    $"{catalogue.Actions.Count} action(s).");
+
 var policyFiles = Directory
     .EnumerateFiles(policyDirectory, "*.json", SearchOption.TopDirectoryOnly)
     .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
@@ -81,9 +97,14 @@ foreach (var policyFile in policyFiles)
         var expectedJob = Path.GetFileNameWithoutExtension(policyFile);
         var policies = RulePolicyLoader.Load(policyFile, expectedJob);
 
+        foreach (var policy in policies)
+        {
+            PveActionCatalogLoader.Apply(policy, catalogue);
+        }
+
         Console.WriteLine(
             $"Validated {Path.GetFileName(policyFile)}: " +
-            $"{policies.Count} policy profile(s).");
+            $"{policies.Count} catalogue-backed policy profile(s).");
 
         foreach (var policy in policies)
         {
@@ -208,7 +229,7 @@ static void ValidateDarkKnightOpenerForecast(
 
     Console.WriteLine(
         "DRK forecast reproduced the stored opener's opening burst sequence " +
-        "using cooldowns and action effects.");
+        "using catalogue effects and live-style cooldown snapshots.");
 }
 
 static void ValidateMachinistEvaluator(RulePolicyDefinition definition)
