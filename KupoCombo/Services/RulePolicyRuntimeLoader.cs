@@ -35,6 +35,29 @@ internal static class RulePolicyRuntimeLoader
             $"for {targetCount} target(s).");
     }
 
+    public static bool TryLoadBestProfile(
+        string job,
+        int level,
+        int targetCount,
+        out RulePolicyDefinition? definition)
+    {
+        try
+        {
+            definition = LoadBestProfile(job, level, targetCount);
+            return true;
+        }
+        catch (FileNotFoundException)
+        {
+            definition = null;
+            return false;
+        }
+        catch (InvalidDataException)
+        {
+            definition = null;
+            return false;
+        }
+    }
+
     private static string ResolvePolicyPath(string job)
     {
         var pluginDirectory =
