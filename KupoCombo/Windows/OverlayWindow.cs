@@ -110,7 +110,8 @@ public sealed class OverlayWindow : Window, IDisposable
 
     private void DrawDynamicPractice()
     {
-        var decision = plugin.TrainingSession.CurrentDecision;
+        var session = plugin.TrainingSession;
+        var decision = session.CurrentDecision;
 
         if (!plugin.IsDynamicPractice ||
             decision == null ||
@@ -121,10 +122,28 @@ public sealed class OverlayWindow : Window, IDisposable
         }
 
         ImGui.Text(plugin.SelectedSequenceName);
+
+        var forecast = session.CurrentForecast;
+        var currentGcdSeconds = forecast.FirstOrDefault()?.DurationSeconds ?? 0f;
+        var timing = session.Snapshot.TimingProfile;
+        var currentMp = session.Snapshot.GetGauge("mp");
+        var plan = session.CurrentPlan;
+
+        ImGui.TextDisabled(
+            $"{FormatPhase(session.CurrentPhase)} | " +
+            $"MP {currentMp:N0}/10,000 | " +
+            $"GCD {currentGcdSeconds:0.00}s | " +
+            $"SkS {timing.SkillSpeed:N0}");
+
+        if (!plan.IsEmpty)
+        {
+            ImGui.TextDisabled(
+                $"Plan: {plan.Steps.Count} GCD windows across " +
+                $"{plan.HorizonSeconds:0}s | " +
+                $"Spell Speed {timing.SpellSpeed:N0} | Haste {timing.Haste:N0}");
+        }
+
         ImGui.Spacing();
-
-        var forecast = plugin.TrainingSession.CurrentForecast;
-
         ImGui.TextDisabled("Committed action ribbon");
 
         if (forecast.Count > 0)
@@ -171,7 +190,7 @@ public sealed class OverlayWindow : Window, IDisposable
         if (forecast.Count > 0)
         {
             ImGui.TextDisabled(
-                "Smaller outlined icons are weaves. The next two GCDs stay committed; the distant tail may refine from live state.");
+                "Smaller outlined icons are weaves. The next two GCDs stay committed; the full-cycle plan adapts behind them.");
         }
     }
 
@@ -491,6 +510,20 @@ public sealed class OverlayWindow : Window, IDisposable
     {
         ImGui.SetCursorPosX(
             cellStartX + Math.Max(0, (cellWidth - itemWidth) / 2));
+    }
+
+    private static string FormatPhase(RotationPhase phase)
+    {
+        return phase switch
+        {
+            RotationPhase.PrePull => "Pre-pull",
+            RotationPhase.Opener => "Opener",
+            RotationPhase.Burst => "Burst",
+            RotationPhase.Filler => "Filler",
+            RotationPhase.Pooling => "Pooling",
+            RotationPhase.Recovery => "Recovery",
+            _ => phase.ToString()
+        };
     }
 
     private static string ShortenLabel(string actionName)
