@@ -11,6 +11,7 @@ public sealed class RuleSetTrainingPolicy :
 {
     private const float AssumedGcdSeconds = 2.5f;
     private const float AssumedComboSeconds = 30f;
+    private const int MaximumForecastWeavesPerWindow = 2;
 
     private readonly PolicyEvaluationContext context;
     private readonly PolicyConditionEvaluator conditionEvaluator;
@@ -56,13 +57,20 @@ public sealed class RuleSetTrainingPolicy :
         TrainingState state,
         int maximumGcds)
     {
-        var stepLimit = Math.Clamp(maximumGcds, 1, 8);
+        var stepLimit = Math.Clamp(maximumGcds, 1, 12);
         var simulatedState = state.Clone();
         var forecast = new List<TrainingForecastStep>(stepLimit);
-        var unappliedWeaveBranch = false;
 
         for (var offset = 0; offset < stepLimit; offset++)
         {
+            var initialEvaluation = EvaluateCore(simulatedState);
+
+            if (initialEvaluation.Decision.IsComplete)
+            {
+                break;
+            }
+
+            var appliedWeaves = ApplyForecastWeaveWindow(simulatedState);
             var evaluation = EvaluateCore(simulatedState);
 
             if (evaluation.Decision.IsComplete ||
@@ -71,9 +79,12 @@ public sealed class RuleSetTrainingPolicy :
                 break;
             }
 
+            var weaveOverflow =
+                initialEvaluation.WeaveMatches.Count > appliedWeaves.Count;
             var confidence = Math.Clamp(
-                1f - (offset * 0.18f) -
-                (unappliedWeaveBranch ? 0.12f : 0f),
+                1f -
+                (offset * 0.12f) -
+                (weaveOverflow ? 0.08f : 0f),
                 0.35f,
                 1f);
 
@@ -82,23 +93,50 @@ public sealed class RuleSetTrainingPolicy :
                 {
                     Offset = offset,
                     GcdActionId = evaluation.Decision.PreferredActionId,
-                    SuggestedActionIds =
-                        evaluation.Decision.SuggestedActionIds,
+                    SuggestedActionIds = appliedWeaves,
                     Reason = evaluation.Decision.Reason,
-                    SuggestionReason =
-                        evaluation.Decision.SuggestionReason,
+                    SuggestionReason = string.Join(
+                        " ",
+                        appliedWeaves.Select(actionId =>
+                            initialEvaluation.WeaveMatches
+                                .FirstOrDefault(match => match.ActionId == actionId)
+                                ?.Reason ?? string.Empty)
+                            .Where(reason => !string.IsNullOrWhiteSpace(reason))),
                     Confidence = confidence
                 });
 
-            unappliedWeaveBranch |=
-                evaluation.Decision.SuggestedActionIds.Count > 0;
-
             ApplyForecastTransition(
                 simulatedState,
-                evaluation.GcdMatch);
+                evaluation.GcdMatch,
+                isGcd: true);
         }
 
         return forecast;
+    }
+
+    private IReadOnlyList<uint> ApplyForecastWeaveWindow(
+        TrainingState state)
+    {
+        var appliedActionIds = new List<uint>();
+
+        for (var slot = 0;
+             slot < MaximumForecastWeavesPerWindow;
+             slot++)
+        {
+            var evaluation = EvaluateCore(state);
+            var match = evaluation.WeaveMatches.FirstOrDefault(candidate =>
+                !appliedActionIds.Contains(candidate.ActionId));
+
+            if (match == null)
+            {
+                break;
+            }
+
+            appliedActionIds.Add(match.ActionId);
+            ApplyForecastTransition(state, match, isGcd: false);
+        }
+
+        return appliedActionIds;
     }
 
     private EvaluationResult EvaluateCore(TrainingState state)
@@ -108,10 +146,12 @@ public sealed class RuleSetTrainingPolicy :
             return new EvaluationResult(
                 TrainingDecision.Complete(
                     $"Policy '{Definition.Name}' does not apply to the current level or target count."),
-                null);
+                null,
+                Array.Empty<RuleMatch>());
         }
 
         RuleMatch? gcdMatch = null;
+        var weaveMatches = new List<RuleMatch>();
         var suggestedActions = new List<uint>();
         var suggestionReasons = new List<string>();
 
@@ -129,6 +169,7 @@ public sealed class RuleSetTrainingPolicy :
                 if (!suggestedActions.Contains(match.ActionId))
                 {
                     suggestedActions.Add(match.ActionId);
+                    weaveMatches.Add(match);
                 }
 
                 var suggestionReason = !string.IsNullOrWhiteSpace(rule.SuggestionReason)
@@ -152,7 +193,8 @@ public sealed class RuleSetTrainingPolicy :
             return new EvaluationResult(
                 TrainingDecision.Complete(
                     "No GCD rule matched the current training state."),
-                null);
+                null,
+                weaveMatches);
         }
 
         return new EvaluationResult(
@@ -165,7 +207,8 @@ public sealed class RuleSetTrainingPolicy :
                 SuggestionReason = string.Join(" ", suggestionReasons),
                 MistakeResponse = gcdMatch.MistakeResponse
             },
-            gcdMatch);
+            gcdMatch,
+            weaveMatches);
     }
 
     private bool IsProfileApplicable(TrainingState state)
@@ -449,18 +492,37 @@ public sealed class RuleSetTrainingPolicy :
             filteredAcceptableActions,
             !string.IsNullOrWhiteSpace(rule.Reason)
                 ? rule.Reason
-                : $"Rule '{rule.Id}' selected this action.",
+                : !string.IsNullOrWhiteSpace(rule.SuggestionReason)
+                    ? rule.SuggestionReason
+                    : $"Rule '{rule.Id}' selected this action.",
             rule.MistakeResponse);
     }
 
     private void ApplyForecastTransition(
         TrainingState state,
-        RuleMatch match)
+        RuleMatch match,
+        bool isGcd)
     {
-        state.RecordAcceptedAction(match.ActionId);
+        if (isGcd)
+        {
+            state.RecordAcceptedAction(match.ActionId);
+        }
+        else
+        {
+            state.RecordObservedAction(match.ActionId);
+        }
+
         ConsumeForecastCooldown(state, match);
         ApplyForecastRuleEffect(state, match);
+        ApplyForecastActionEffects(state, match.ActionAlias);
+
+        if (!isGcd)
+        {
+            return;
+        }
+
         UpdateForecastCombo(state, match.ActionId);
+        AdvanceForecastTimers(state, AssumedGcdSeconds);
         state.AdvanceForecastTime(AssumedGcdSeconds);
     }
 
@@ -507,6 +569,95 @@ public sealed class RuleSetTrainingPolicy :
         }
     }
 
+    private void ApplyForecastActionEffects(
+        TrainingState state,
+        string actionAlias)
+    {
+        foreach (var effect in context.GetAction(actionAlias).ForecastEffects)
+        {
+            switch (effect.Type)
+            {
+                case PolicyForecastEffectType.AddStateValue:
+                    ApplyForecastStateValue(state, effect, add: true);
+                    break;
+
+                case PolicyForecastEffectType.SetStateValue:
+                    ApplyForecastStateValue(state, effect, add: false);
+                    break;
+
+                case PolicyForecastEffectType.AddStatus:
+                    state.SetStatus(
+                        context.GetStatusId(effect.Status),
+                        Math.Max(1, effect.Stacks),
+                        effect.DurationSeconds);
+                    break;
+
+                case PolicyForecastEffectType.RemoveStatus:
+                    state.RemoveStatus(context.GetStatusId(effect.Status));
+                    break;
+
+                case PolicyForecastEffectType.SetAdjustedAction:
+                    state.SetAdjustedAction(
+                        context.GetAction(effect.Action).ActionId,
+                        context.GetAction(effect.AdjustedAction).ActionId);
+                    break;
+
+                case PolicyForecastEffectType.ResetAdjustedAction:
+                    var baseAction = context.GetAction(effect.Action);
+                    state.SetAdjustedAction(
+                        baseAction.ActionId,
+                        baseAction.ActionId);
+                    break;
+            }
+        }
+    }
+
+    private void ApplyForecastStateValue(
+        TrainingState state,
+        PolicyForecastEffectDefinition effect,
+        bool add)
+    {
+        var value = add
+            ? context.GetStateValue(effect.State, state) + effect.Value
+            : effect.Value;
+
+        if (effect.Minimum.HasValue)
+        {
+            value = Math.Max(effect.Minimum.Value, value);
+        }
+
+        if (effect.Maximum.HasValue)
+        {
+            value = Math.Min(effect.Maximum.Value, value);
+        }
+
+        context.SetStateValue(effect.State, state, value);
+    }
+
+    private void AdvanceForecastTimers(
+        TrainingState state,
+        float elapsedSeconds)
+    {
+        foreach (var (alias, input) in Definition.StateInputs)
+        {
+            if (input.Kind != PolicyStateValueKind.Timer)
+            {
+                continue;
+            }
+
+            var elapsed = input.Unit.Equals(
+                "milliseconds",
+                StringComparison.OrdinalIgnoreCase)
+                ? elapsedSeconds * 1000d
+                : elapsedSeconds;
+
+            context.SetStateValue(
+                alias,
+                state,
+                Math.Max(0d, context.GetStateValue(alias, state) - elapsed));
+        }
+    }
+
     private void ResetForecastAdjustedAction(
         TrainingState state,
         string actionAlias)
@@ -538,7 +689,7 @@ public sealed class RuleSetTrainingPolicy :
             0d,
             Math.Min(current, threshold - incomingGain));
 
-        state.SetStateValue(rule.Resource, predicted);
+        context.SetStateValue(rule.Resource, state, predicted);
     }
 
     private void UpdateForecastCombo(
@@ -654,5 +805,6 @@ public sealed class RuleSetTrainingPolicy :
 
     private sealed record EvaluationResult(
         TrainingDecision Decision,
-        RuleMatch? GcdMatch);
+        RuleMatch? GcdMatch,
+        IReadOnlyList<RuleMatch> WeaveMatches);
 }
