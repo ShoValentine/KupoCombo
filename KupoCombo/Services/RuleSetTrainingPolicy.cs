@@ -7,11 +7,13 @@ namespace KupoCombo.Services;
 
 public sealed class RuleSetTrainingPolicy :
     ITrainingPolicy,
-    ITrainingForecastPolicy
+    ITrainingForecastPolicy,
+    IPracticePlanPolicy
 {
     private const float AssumedGcdSeconds = 2.5f;
     private const float AssumedComboSeconds = 30f;
     private const int MaximumForecastWeavesPerWindow = 2;
+    private const int MaximumForecastGcds = 256;
 
     private readonly PolicyEvaluationContext context;
     private readonly PolicyConditionEvaluator conditionEvaluator;
@@ -57,12 +59,87 @@ public sealed class RuleSetTrainingPolicy :
         TrainingState state,
         int maximumGcds)
     {
-        var stepLimit = Math.Clamp(maximumGcds, 1, 12);
+        return ForecastCore(state, maximumGcds, null);
+    }
+
+    public PracticePlan BuildPracticePlan(TrainingState state)
+    {
+        var horizonSeconds = Math.Max(
+            30,
+            Definition.Profile.BurstCycleSeconds);
+        var steps = ForecastCore(
+            state,
+            MaximumForecastGcds,
+            horizonSeconds);
+
+        return new PracticePlan
+        {
+            Job = Job,
+            StartsAtCombatTimeSeconds = state.CombatTimeSeconds,
+            HorizonSeconds = horizonSeconds,
+            TimingProfile = state.TimingProfile.Clone(),
+            Steps = steps
+        };
+    }
+
+    public int GetExpectedMpDelta(
+        uint actionId,
+        TrainingState state)
+    {
+        foreach (var (alias, action) in Definition.Actions)
+        {
+            var resolvedActionId = context.GetActionId(alias, state);
+
+            if (action.ActionId != actionId && resolvedActionId != actionId)
+            {
+                continue;
+            }
+
+            var mpEffects = action.ForecastEffects
+                .Where(effect =>
+                    effect.Type == PolicyForecastEffectType.AddStateValue &&
+                    effect.State.Equals(
+                        "mp",
+                        StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (mpEffects.Length > 0)
+            {
+                return (int)Math.Round(mpEffects.Sum(effect => effect.Value));
+            }
+
+            if (action.MpCost.HasValue)
+            {
+                return -Math.Max(0, action.MpCost.Value);
+            }
+
+            return 0;
+        }
+
+        return 0;
+    }
+
+    private IReadOnlyList<TrainingForecastStep> ForecastCore(
+        TrainingState state,
+        int maximumGcds,
+        double? horizonSeconds)
+    {
+        var stepLimit = Math.Clamp(maximumGcds, 1, MaximumForecastGcds);
         var simulatedState = state.Clone();
+        var planStartSeconds = simulatedState.CombatTimeSeconds;
         var forecast = new List<TrainingForecastStep>(stepLimit);
 
         for (var offset = 0; offset < stepLimit; offset++)
         {
+            var startsAtSeconds =
+                simulatedState.CombatTimeSeconds - planStartSeconds;
+
+            if (horizonSeconds.HasValue &&
+                startsAtSeconds >= horizonSeconds.Value)
+            {
+                break;
+            }
+
             var initialEvaluation = EvaluateCore(simulatedState);
 
             if (initialEvaluation.Decision.IsComplete)
@@ -70,6 +147,8 @@ public sealed class RuleSetTrainingPolicy :
                 break;
             }
 
+            var phase = DetermineRotationPhase(simulatedState);
+            var expectedMpBefore = simulatedState.GetGauge("mp");
             var appliedWeaves = ApplyForecastWeaveWindow(simulatedState);
             var evaluation = EvaluateCore(simulatedState);
 
@@ -83,17 +162,26 @@ public sealed class RuleSetTrainingPolicy :
                 initialEvaluation.WeaveMatches.Count > appliedWeaves.Count;
             var confidence = Math.Clamp(
                 1f -
-                (offset * 0.12f) -
+                (offset * 0.015f) -
                 (weaveOverflow ? 0.08f : 0f),
                 0.35f,
                 1f);
+            var elapsedSeconds = ApplyForecastTransition(
+                simulatedState,
+                evaluation.GcdMatch,
+                isGcd: true);
 
             forecast.Add(
                 new TrainingForecastStep
                 {
                     Offset = offset,
+                    StartsAtSeconds = startsAtSeconds,
+                    DurationSeconds = elapsedSeconds,
+                    Phase = phase,
                     GcdActionId = evaluation.Decision.PreferredActionId,
                     SuggestedActionIds = appliedWeaves,
+                    ExpectedMpBefore = expectedMpBefore,
+                    ExpectedMpAfter = simulatedState.GetGauge("mp"),
                     Reason = evaluation.Decision.Reason,
                     SuggestionReason = string.Join(
                         " ",
@@ -104,11 +192,6 @@ public sealed class RuleSetTrainingPolicy :
                             .Where(reason => !string.IsNullOrWhiteSpace(reason))),
                     Confidence = confidence
                 });
-
-            ApplyForecastTransition(
-                simulatedState,
-                evaluation.GcdMatch,
-                isGcd: true);
         }
 
         return forecast;
@@ -498,7 +581,7 @@ public sealed class RuleSetTrainingPolicy :
             rule.MistakeResponse);
     }
 
-    private void ApplyForecastTransition(
+    private float ApplyForecastTransition(
         TrainingState state,
         RuleMatch match,
         bool isGcd)
@@ -518,12 +601,74 @@ public sealed class RuleSetTrainingPolicy :
 
         if (!isGcd)
         {
-            return;
+            return 0f;
         }
 
+        var elapsedSeconds = GetForecastElapsedSeconds(state, match);
         UpdateForecastCombo(state, match.ActionId);
-        AdvanceForecastTimers(state, AssumedGcdSeconds);
-        state.AdvanceForecastTime(AssumedGcdSeconds);
+        AdvanceForecastTimers(state, elapsedSeconds);
+        state.AdvanceForecastTime(elapsedSeconds);
+        return elapsedSeconds;
+    }
+
+    private float GetForecastElapsedSeconds(
+        TrainingState state,
+        RuleMatch match)
+    {
+        var action = context.GetAction(match.ActionAlias);
+        var fallbackSeconds = action.TimelineLockSeconds > 0d
+            ? action.TimelineLockSeconds
+            : action.RecastSeconds;
+
+        if (fallbackSeconds <= 0d)
+        {
+            fallbackSeconds = AssumedGcdSeconds;
+        }
+
+        var adjustedSeconds = state.GetAdjustedRecastSeconds(
+            match.ActionId,
+            state.GetAdjustedRecastSeconds(
+                action.ActionId,
+                (float)fallbackSeconds));
+
+        return Math.Clamp(adjustedSeconds, 0.5f, 10f);
+    }
+
+    private RotationPhase DetermineRotationPhase(TrainingState state)
+    {
+        var profile = Definition.Profile;
+        var combatTime = Math.Max(0d, state.CombatTimeSeconds);
+
+        if (combatTime < Math.Max(0, profile.OpenerDurationSeconds))
+        {
+            return RotationPhase.Opener;
+        }
+
+        var cycleSeconds = profile.MinorBurstCycleSeconds > 0
+            ? profile.MinorBurstCycleSeconds
+            : Math.Max(1, profile.BurstCycleSeconds);
+        var pointInCycle = combatTime % cycleSeconds;
+        var burstWindow = Math.Clamp(
+            profile.BurstWindowSeconds,
+            0,
+            cycleSeconds);
+        var poolingWindow = Math.Clamp(
+            profile.PoolingWindowSeconds,
+            0,
+            cycleSeconds);
+
+        if (pointInCycle < burstWindow)
+        {
+            return RotationPhase.Burst;
+        }
+
+        if (poolingWindow > 0 &&
+            pointInCycle >= cycleSeconds - poolingWindow)
+        {
+            return RotationPhase.Pooling;
+        }
+
+        return RotationPhase.Filler;
     }
 
     private void ConsumeForecastCooldown(
