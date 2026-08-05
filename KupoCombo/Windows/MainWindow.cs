@@ -45,16 +45,13 @@ public sealed class MainWindow : Window, IDisposable
         if (plugin.Sequences.Count == 0)
         {
             ImGui.TextWrapped(
-                "No sequence data was found for the current job. " +
-                "Check the sequence files and Dalamud log for errors.");
+                plugin.HasDynamicPractice
+                    ? "No fixed sequence data was found for the current job. " +
+                      "Data-driven Priority Practice remains available above."
+                    : "No sequence or rule-policy data was found for the current job. " +
+                      "Check the data files and Dalamud log for errors.");
 
-            ImGui.Spacing();
-
-            if (ImGui.Button("Settings"))
-            {
-                plugin.ToggleConfigUi();
-            }
-
+            DrawTestingAndSettings();
             return;
         }
 
@@ -113,57 +110,33 @@ public sealed class MainWindow : Window, IDisposable
             plugin.ToggleOverlay();
         }
 
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        ImGui.Text("Temporary testing controls");
-
-        if (ImGui.Button(
-                "Simulate Correct Action",
-                new Vector2(245, 0)))
-        {
-            plugin.SimulateCorrectAction();
-        }
-
-        if (ImGui.Button(
-                "Run DRK Policy Self-Test",
-                new Vector2(245, 0)))
-        {
-            RunDarkKnightPolicyDiagnostics();
-        }
-
-        if (ImGui.Button(
-                "Show Test Moogle Prompt",
-                new Vector2(245, 0)))
-        {
-            plugin.ShowTestPrompt();
-        }
-
-        ImGui.Spacing();
-
-        if (ImGui.Button("Settings"))
-        {
-            plugin.ToggleConfigUi();
-        }
+        DrawTestingAndSettings();
     }
 
     private void DrawDynamicPracticePreview()
     {
-        if (!plugin.CurrentJob.Equals("DRK", StringComparison.OrdinalIgnoreCase))
+        var definition = plugin.CurrentRulePolicy;
+
+        if (definition == null)
         {
             return;
         }
 
-        ImGui.Text("Conditional practice preview");
+        ImGui.Text("Data-driven Priority Practice");
         ImGui.TextWrapped(
-            "Reads live combo, Blood, MP, Dark Arts, Delirium and cooldown " +
-            "state. It evaluates the next GCD separately from suggested weaves.");
+            $"{definition.Job} — {definition.Name}. " +
+            "The shared evaluator chooses the next GCD separately from " +
+            "non-punitive weave suggestions.");
+
+        if (!string.IsNullOrWhiteSpace(definition.Profile.Notes))
+        {
+            ImGui.TextDisabled(definition.Profile.Notes);
+        }
 
         ImGui.Spacing();
 
         if (ImGui.Button(
-                "Start DRK Priority Practice",
+                $"Start {definition.Job} Priority Practice",
                 new Vector2(245, 0)))
         {
             plugin.StartDynamicPractice();
@@ -260,18 +233,25 @@ public sealed class MainWindow : Window, IDisposable
     {
         var state = plugin.TrainingSession.Snapshot;
         var decision = plugin.TrainingSession.CurrentDecision;
+        var rulePolicy = plugin.TrainingSession.Policy as RuleSetTrainingPolicy;
 
         ImGui.Spacing();
         ImGui.TextDisabled(
-            $"Blood: {state.GetGauge("blood")} | " +
-            $"MP: {state.GetGauge("mp")} | " +
             $"Combo: {state.NativeComboActionId} " +
             $"({state.ComboRemainingSeconds:0.0}s)");
 
-        ImGui.TextDisabled(
-            $"Darkside: {state.GetGauge("darkside_ms") / 1000f:0.0}s | " +
-            $"Dark Arts: {state.GetGauge("dark_arts")} | " +
-            $"Delirium step: {state.GetGauge("delirium_step")}");
+        if (rulePolicy != null)
+        {
+            var values = rulePolicy.Definition.StateInputs
+                .Keys
+                .Select(alias => $"{alias}: {state.GetStateValue(alias):0.##}")
+                .ToArray();
+
+            if (values.Length > 0)
+            {
+                ImGui.TextDisabled(string.Join(" | ", values));
+            }
+        }
 
         if (decision == null)
         {
@@ -291,9 +271,50 @@ public sealed class MainWindow : Window, IDisposable
         }
     }
 
-    private static void RunDarkKnightPolicyDiagnostics()
+    private void DrawTestingAndSettings()
     {
-        var report = TrainingPolicyDiagnostics.RunDarkKnight();
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        ImGui.Text("Temporary testing controls");
+
+        if (ImGui.Button(
+                "Simulate Correct Action",
+                new Vector2(245, 0)))
+        {
+            plugin.SimulateCorrectAction();
+        }
+
+        if (plugin.CurrentRulePolicy?.Job.Equals(
+                "DRK",
+                StringComparison.OrdinalIgnoreCase) == true &&
+            ImGui.Button(
+                "Run DRK Policy Self-Test",
+                new Vector2(245, 0)))
+        {
+            RunDarkKnightPolicyDiagnostics(plugin.CurrentRulePolicy);
+        }
+
+        if (ImGui.Button(
+                "Show Test Moogle Prompt",
+                new Vector2(245, 0)))
+        {
+            plugin.ShowTestPrompt();
+        }
+
+        ImGui.Spacing();
+
+        if (ImGui.Button("Settings"))
+        {
+            plugin.ToggleConfigUi();
+        }
+    }
+
+    private static void RunDarkKnightPolicyDiagnostics(
+        KupoCombo.Models.RulePolicyDefinition definition)
+    {
+        var report = TrainingPolicyDiagnostics.RunDarkKnight(definition);
 
         foreach (var result in report.Results)
         {
