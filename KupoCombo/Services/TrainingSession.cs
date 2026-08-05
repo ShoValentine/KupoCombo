@@ -42,6 +42,7 @@ public sealed class TrainingSession
 {
     private const int ForecastViewportGcdCount = 12;
     private const int CommittedGcdDepth = 2;
+    private const float DefaultGcdSeconds = 2.5f;
 
     private static readonly TimeSpan PlanRefreshInterval =
         TimeSpan.FromMilliseconds(500);
@@ -268,6 +269,7 @@ public sealed class TrainingSession
         var wasPreferred = decision.IsPreferred(actionId);
 
         Snapshot.RecordAcceptedAction(actionId);
+        AdvancePracticeTimeline(actionId);
         State = TrainingSessionState.Running;
 
         if (wasPreferred &&
@@ -308,6 +310,26 @@ public sealed class TrainingSession
             WasPreferred = wasPreferred,
             DecisionReason = decision.Reason
         };
+    }
+
+    private void AdvancePracticeTimeline(uint actionId)
+    {
+        var forecastDuration = CurrentForecast.FirstOrDefault()?.DurationSeconds
+            ?? DefaultGcdSeconds;
+        var elapsedSeconds = Snapshot.GetAdjustedRecastSeconds(
+            actionId,
+            forecastDuration);
+
+        if (elapsedSeconds <= 0f)
+        {
+            elapsedSeconds = forecastDuration > 0f
+                ? forecastDuration
+                : DefaultGcdSeconds;
+        }
+
+        Snapshot.SetCombatTimeSeconds(
+            Snapshot.CombatTimeSeconds +
+            Math.Clamp(elapsedSeconds, 0.5f, 10f));
     }
 
     private void RecordMpObservation(int mpBefore, int mpAfter)
