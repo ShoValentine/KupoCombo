@@ -160,7 +160,8 @@ internal sealed class PolicyConditionEvaluator
             JsonValueKind.Number => condition.Value.GetUInt32(),
             JsonValueKind.String => context.GetActionId(
                 condition.Value.GetString() ?? string.Empty,
-                state),
+                state,
+                resolveAdjustedAlias: false),
             _ => 0u
         };
 
