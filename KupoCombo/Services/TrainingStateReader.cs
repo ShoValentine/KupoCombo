@@ -120,6 +120,11 @@ public unsafe sealed class TrainingStateReader
             (int)ActionManager.GetMaxCharges(
                 actionId,
                 (uint)Math.Max(0, level)));
+        var rechargeSeconds = Math.Max(
+            0f,
+            actionManager->GetRecastTime(
+                ActionType.Action,
+                actionId));
 
         var recastGroup = actionManager->GetRecastGroup(
             (int)ActionType.Action,
@@ -130,7 +135,8 @@ public unsafe sealed class TrainingStateReader
             return new CooldownSnapshot
             {
                 Charges = maximumCharges,
-                MaximumCharges = maximumCharges
+                MaximumCharges = maximumCharges,
+                RechargeSeconds = rechargeSeconds
             };
         }
 
@@ -141,19 +147,17 @@ public unsafe sealed class TrainingStateReader
             return new CooldownSnapshot
             {
                 Charges = maximumCharges,
-                MaximumCharges = maximumCharges
+                MaximumCharges = maximumCharges,
+                RechargeSeconds = rechargeSeconds
             };
         }
-
-        var rechargeSeconds = actionManager->GetRecastTime(
-            ActionType.Action,
-            actionId);
 
         if (rechargeSeconds <= 0f)
         {
             return new CooldownSnapshot
             {
                 RemainingSeconds = Math.Max(0f, detail->Total - detail->Elapsed),
+                RechargeSeconds = 0f,
                 Charges = 0,
                 MaximumCharges = maximumCharges
             };
@@ -171,6 +175,7 @@ public unsafe sealed class TrainingStateReader
         return new CooldownSnapshot
         {
             RemainingSeconds = Math.Max(0f, remainingSeconds),
+            RechargeSeconds = rechargeSeconds,
             Charges = charges,
             MaximumCharges = maximumCharges
         };
