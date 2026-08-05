@@ -40,7 +40,7 @@ public sealed class TrainingActionResult
 
 public sealed class TrainingSession
 {
-    private const int ForecastGcdCount = 8;
+    private const int ForecastGcdCount = 12;
     private const int CommittedGcdDepth = 2;
 
     private bool hasReceivedLiveState;
