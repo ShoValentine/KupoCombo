@@ -76,6 +76,8 @@ public sealed class PolicyActionDefinition
 
     public string AdjustedFrom { get; set; } = string.Empty;
 
+    public bool OverrideCatalogueForecastEffects { get; set; }
+
     [JsonIgnore]
     public PveActionKind? Kind { get; set; }
 
@@ -125,6 +127,8 @@ public sealed class PolicyForecastEffectDefinition
     public string Action { get; set; } = string.Empty;
 
     public string AdjustedAction { get; set; } = string.Empty;
+
+    public PolicyConditionSet Conditions { get; set; } = new();
 }
 
 public sealed class PolicyStateInputDefinition
