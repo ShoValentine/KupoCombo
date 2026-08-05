@@ -125,7 +125,7 @@ public sealed class OverlayWindow : Window, IDisposable
 
         var forecast = plugin.TrainingSession.CurrentForecast;
 
-        ImGui.TextDisabled("Predicted action ribbon");
+        ImGui.TextDisabled("Committed action ribbon");
 
         if (forecast.Count > 0)
         {
@@ -171,7 +171,7 @@ public sealed class OverlayWindow : Window, IDisposable
         if (forecast.Count > 0)
         {
             ImGui.TextDisabled(
-                "Smaller outlined icons are weaves. Later actions are predictions and recalculate from live state.");
+                "Smaller outlined icons are weaves. The next two GCDs stay committed; the distant tail may refine from live state.");
         }
     }
 
