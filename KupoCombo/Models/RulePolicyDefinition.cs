@@ -68,6 +68,30 @@ public sealed class PolicyActionDefinition
 
     public string AdjustedFrom { get; set; } = string.Empty;
 
+    [JsonIgnore]
+    public PveActionKind? Kind { get; set; }
+
+    [JsonIgnore]
+    public double CastSeconds { get; set; }
+
+    [JsonIgnore]
+    public double RecastSeconds { get; set; }
+
+    [JsonIgnore]
+    public double TimelineLockSeconds { get; set; } = 2.5d;
+
+    [JsonIgnore]
+    public int MaximumCharges { get; set; } = 1;
+
+    [JsonIgnore]
+    public int? Potency { get; set; }
+
+    [JsonIgnore]
+    public int? ComboPotency { get; set; }
+
+    [JsonIgnore]
+    public int? MpCost { get; set; }
+
     public List<PolicyForecastEffectDefinition> ForecastEffects { get; set; } =
         new();
 }
