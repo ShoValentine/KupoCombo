@@ -116,7 +116,7 @@ internal sealed class PolicyConditionEvaluator
 
             PolicyConditionSource.LastAction =>
                 CompareAction(
-                    state.LastObservedActionId,
+                    state.LastAcceptedActionId,
                     condition,
                     state),
 
