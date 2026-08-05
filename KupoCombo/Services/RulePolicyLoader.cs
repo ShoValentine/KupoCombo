@@ -186,6 +186,72 @@ public static class RulePolicyLoader
             {
                 RequireAction(policy, action.AdjustedFrom, $"action '{alias}' adjustedFrom");
             }
+
+            ValidateForecastEffects(policy, alias, action.ForecastEffects);
+        }
+    }
+
+    private static void ValidateForecastEffects(
+        RulePolicyDefinition policy,
+        string actionAlias,
+        IReadOnlyCollection<PolicyForecastEffectDefinition> effects)
+    {
+        foreach (var effect in effects)
+        {
+            switch (effect.Type)
+            {
+                case PolicyForecastEffectType.AddStateValue:
+                case PolicyForecastEffectType.SetStateValue:
+                    RequireStateInput(
+                        policy,
+                        effect.State,
+                        $"action '{actionAlias}' forecast effect");
+                    break;
+
+                case PolicyForecastEffectType.AddStatus:
+                    RequireStatus(
+                        policy,
+                        effect.Status,
+                        $"action '{actionAlias}' forecast effect");
+
+                    if (effect.DurationSeconds <= 0f)
+                    {
+                        throw new InvalidDataException(
+                            $"Action '{actionAlias}' in policy '{policy.Id}' " +
+                            "contains an addStatus forecast effect without a positive duration.");
+                    }
+                    break;
+
+                case PolicyForecastEffectType.RemoveStatus:
+                    RequireStatus(
+                        policy,
+                        effect.Status,
+                        $"action '{actionAlias}' forecast effect");
+                    break;
+
+                case PolicyForecastEffectType.SetAdjustedAction:
+                    RequireAction(
+                        policy,
+                        effect.Action,
+                        $"action '{actionAlias}' forecast base action");
+                    RequireAction(
+                        policy,
+                        effect.AdjustedAction,
+                        $"action '{actionAlias}' forecast adjusted action");
+                    break;
+
+                case PolicyForecastEffectType.ResetAdjustedAction:
+                    RequireAction(
+                        policy,
+                        effect.Action,
+                        $"action '{actionAlias}' forecast reset action");
+                    break;
+
+                default:
+                    throw new InvalidDataException(
+                        $"Action '{actionAlias}' in policy '{policy.Id}' " +
+                        "contains an unsupported forecast effect.");
+            }
         }
     }
 
@@ -402,8 +468,11 @@ public static class RulePolicyLoader
                 case PolicyConditionSource.CooldownReady:
                 case PolicyConditionSource.CooldownCharges:
                 case PolicyConditionSource.AdjustedAction:
-                case PolicyConditionSource.LastAction:
                     RequireAction(policy, condition.Key, $"rule '{rule.Id}' condition key");
+                    break;
+
+                case PolicyConditionSource.LastAction:
+                    ValidateActionConditionValue(policy, rule, condition);
                     break;
 
                 case PolicyConditionSource.Level:
@@ -419,6 +488,28 @@ public static class RulePolicyLoader
                         $"Rule '{rule.Id}' in policy '{policy.Id}' contains an unsupported condition source.");
             }
         }
+    }
+
+    private static void ValidateActionConditionValue(
+        RulePolicyDefinition policy,
+        PolicyRuleDefinition rule,
+        PolicyConditionDefinition condition)
+    {
+        if (condition.Value.ValueKind == JsonValueKind.Number)
+        {
+            return;
+        }
+
+        if (condition.Value.ValueKind != JsonValueKind.String)
+        {
+            throw new InvalidDataException(
+                $"Rule '{rule.Id}' in policy '{policy.Id}' uses a non-action lastAction value.");
+        }
+
+        RequireAction(
+            policy,
+            condition.Value.GetString() ?? string.Empty,
+            $"rule '{rule.Id}' lastAction value");
     }
 
     private static void RequireAction(
