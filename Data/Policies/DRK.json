@@ -11,284 +11,41 @@
         "maximumTargetCount": 1,
         "assumesContinuousUptime": true,
         "burstCycleSeconds": 120,
-        "notes": "Level-100 single-target uninterrupted training-dummy profile. The predictive burst skeleton is aligned with the stored standard opener while remaining state and cooldown driven."
+        "notes": "Level-100 single-target uninterrupted training-dummy profile. Action mechanics come from the shared PvE catalogue; this file owns priority, pooling and burst alignment."
       },
       "actions": {
-        "unmend": {
-          "actionId": 3624,
-          "displayName": "Unmend",
-          "lane": "gcd",
-          "role": "graded",
-          "minimumLevel": 15
-        },
-        "hardSlash": {
-          "actionId": 3617,
-          "displayName": "Hard Slash",
-          "lane": "gcd",
-          "role": "graded",
-          "minimumLevel": 1
-        },
-        "syphonStrike": {
-          "actionId": 3623,
-          "displayName": "Syphon Strike",
-          "lane": "gcd",
-          "role": "graded",
-          "minimumLevel": 2,
-          "forecastEffects": [
-            {
-              "type": "addStateValue",
-              "state": "mp",
-              "value": 600
-            }
-          ]
-        },
-        "souleater": {
-          "actionId": 3632,
-          "displayName": "Souleater",
-          "lane": "gcd",
-          "role": "graded",
-          "minimumLevel": 26,
-          "forecastEffects": [
-            {
-              "type": "addStateValue",
-              "state": "blood",
-              "value": 20
-            }
-          ]
-        },
-        "livingShadow": {
-          "actionId": 16472,
-          "displayName": "Living Shadow",
-          "lane": "weave",
-          "role": "advisory",
-          "minimumLevel": 80,
-          "forecastEffects": [
-            {
-              "type": "setAdjustedAction",
-              "action": "livingShadow",
-              "adjustedAction": "disesteem"
-            }
-          ]
-        },
-        "disesteem": {
-          "actionId": 36932,
-          "displayName": "Disesteem",
-          "lane": "gcd",
-          "role": "graded",
-          "minimumLevel": 100,
-          "adjustedFrom": "livingShadow",
-          "forecastEffects": [
-            {
-              "type": "resetAdjustedAction",
-              "action": "livingShadow"
-            }
-          ]
-        },
-        "delirium": {
-          "actionId": 7390,
-          "displayName": "Delirium",
-          "lane": "weave",
-          "role": "advisory",
-          "minimumLevel": 68,
-          "forecastEffects": [
-            {
-              "type": "setAdjustedAction",
-              "action": "bloodspiller",
-              "adjustedAction": "scarletDelirium"
-            },
-            {
-              "type": "addStatus",
-              "status": "delirium",
-              "durationSeconds": 15,
-              "stacks": 3
-            }
-          ]
-        },
-        "bloodspiller": {
-          "actionId": 7392,
-          "displayName": "Bloodspiller",
-          "lane": "gcd",
-          "role": "graded",
-          "minimumLevel": 62,
-          "forecastEffects": [
-            {
-              "type": "addStateValue",
-              "state": "blood",
-              "value": -50,
-              "minimum": 0
-            },
-            {
-              "type": "removeStatus",
-              "status": "delirium"
-            }
-          ]
-        },
-        "scarletDelirium": {
-          "actionId": 36928,
-          "displayName": "Scarlet Delirium",
-          "lane": "gcd",
-          "role": "graded",
-          "minimumLevel": 100,
-          "adjustedFrom": "bloodspiller",
-          "forecastEffects": [
-            {
-              "type": "setAdjustedAction",
-              "action": "bloodspiller",
-              "adjustedAction": "comeuppance"
-            }
-          ]
-        },
-        "comeuppance": {
-          "actionId": 36929,
-          "displayName": "Comeuppance",
-          "lane": "gcd",
-          "role": "graded",
-          "minimumLevel": 100,
-          "adjustedFrom": "bloodspiller",
-          "forecastEffects": [
-            {
-              "type": "setAdjustedAction",
-              "action": "bloodspiller",
-              "adjustedAction": "torcleaver"
-            }
-          ]
-        },
-        "torcleaver": {
-          "actionId": 36930,
-          "displayName": "Torcleaver",
-          "lane": "gcd",
-          "role": "graded",
-          "minimumLevel": 100,
-          "adjustedFrom": "bloodspiller",
-          "forecastEffects": [
-            {
-              "type": "resetAdjustedAction",
-              "action": "bloodspiller"
-            }
-          ]
-        },
-        "edgeOfDarkness": {
-          "actionId": 16467,
-          "displayName": "Edge of Darkness",
-          "lane": "weave",
-          "role": "observed",
-          "minimumLevel": 40
-        },
-        "edgeOfShadow": {
-          "actionId": 16470,
-          "displayName": "Edge of Shadow",
-          "lane": "weave",
-          "role": "advisory",
-          "minimumLevel": 74,
-          "adjustedFrom": "edgeOfDarkness",
-          "forecastEffects": [
-            {
-              "type": "addStateValue",
-              "state": "mp",
-              "value": -3000,
-              "minimum": 0
-            },
-            {
-              "type": "addStateValue",
-              "state": "darksideMs",
-              "value": 30000,
-              "maximum": 60000
-            }
-          ]
-        },
-        "carveAndSpit": {
-          "actionId": 3639,
-          "displayName": "Carve and Spit",
-          "lane": "weave",
-          "role": "advisory",
-          "minimumLevel": 60,
-          "forecastEffects": [
-            {
-              "type": "addStateValue",
-              "state": "mp",
-              "value": 600
-            }
-          ]
-        },
-        "shadowbringer": {
-          "actionId": 25757,
-          "displayName": "Shadowbringer",
-          "lane": "weave",
-          "role": "advisory",
-          "minimumLevel": 90
-        },
-        "saltedEarth": {
-          "actionId": 3643,
-          "displayName": "Salted Earth",
-          "lane": "weave",
-          "role": "advisory",
-          "minimumLevel": 52,
-          "forecastEffects": [
-            {
-              "type": "setAdjustedAction",
-              "action": "saltedEarth",
-              "adjustedAction": "saltAndDarkness"
-            }
-          ]
-        },
-        "saltAndDarkness": {
-          "actionId": 25755,
-          "displayName": "Salt and Darkness",
-          "lane": "weave",
-          "role": "advisory",
-          "minimumLevel": 86,
-          "adjustedFrom": "saltedEarth",
-          "forecastEffects": [
-            {
-              "type": "resetAdjustedAction",
-              "action": "saltedEarth"
-            }
-          ]
-        }
+        "unmend": { "actionId": 3624, "lane": "gcd", "role": "graded", "minimumLevel": 15 },
+        "hardSlash": { "actionId": 3617, "lane": "gcd", "role": "graded", "minimumLevel": 1 },
+        "syphonStrike": { "actionId": 3623, "lane": "gcd", "role": "graded", "minimumLevel": 2 },
+        "souleater": { "actionId": 3632, "lane": "gcd", "role": "graded", "minimumLevel": 26 },
+        "livingShadow": { "actionId": 16472, "lane": "weave", "role": "advisory", "minimumLevel": 80 },
+        "disesteem": { "actionId": 36932, "lane": "gcd", "role": "graded", "minimumLevel": 100, "adjustedFrom": "livingShadow" },
+        "delirium": { "actionId": 7390, "lane": "weave", "role": "advisory", "minimumLevel": 68 },
+        "bloodspiller": { "actionId": 7392, "lane": "gcd", "role": "graded", "minimumLevel": 62 },
+        "scarletDelirium": { "actionId": 36928, "lane": "gcd", "role": "graded", "minimumLevel": 96, "adjustedFrom": "bloodspiller" },
+        "comeuppance": { "actionId": 36929, "lane": "gcd", "role": "graded", "minimumLevel": 96, "adjustedFrom": "bloodspiller" },
+        "torcleaver": { "actionId": 36930, "lane": "gcd", "role": "graded", "minimumLevel": 96, "adjustedFrom": "bloodspiller" },
+        "edgeOfDarkness": { "actionId": 16467, "lane": "weave", "role": "observed", "minimumLevel": 40 },
+        "edgeOfShadow": { "actionId": 16470, "lane": "weave", "role": "advisory", "minimumLevel": 74, "adjustedFrom": "edgeOfDarkness" },
+        "carveAndSpit": { "actionId": 3639, "lane": "weave", "role": "advisory", "minimumLevel": 60 },
+        "shadowbringer": { "actionId": 25757, "lane": "weave", "role": "advisory", "minimumLevel": 90 },
+        "saltedEarth": { "actionId": 3643, "lane": "weave", "role": "advisory", "minimumLevel": 52 },
+        "saltAndDarkness": { "actionId": 25755, "lane": "weave", "role": "advisory", "minimumLevel": 86, "adjustedFrom": "saltedEarth" }
       },
       "statuses": {
         "delirium": 3836,
         "deliriumLegacy": 1972
       },
       "stateInputs": {
-        "blood": {
-          "kind": "resource",
-          "provider": "drk.blood",
-          "minimum": 0,
-          "maximum": 100,
-          "unit": "gauge"
-        },
-        "mp": {
-          "kind": "resource",
-          "provider": "player.mp",
-          "minimum": 0,
-          "maximum": 10000,
-          "unit": "mp"
-        },
-        "darksideMs": {
-          "kind": "timer",
-          "provider": "drk.darkside_ms",
-          "minimum": 0,
-          "maximum": 60000,
-          "unit": "milliseconds"
-        },
-        "darkArts": {
-          "kind": "boolean",
-          "provider": "drk.dark_arts"
-        },
-        "deliriumStep": {
-          "kind": "integer",
-          "provider": "drk.delirium_step",
-          "minimum": 0
-        }
+        "blood": { "kind": "resource", "provider": "drk.blood", "minimum": 0, "maximum": 100, "unit": "gauge" },
+        "mp": { "kind": "resource", "provider": "player.mp", "minimum": 0, "maximum": 10000, "unit": "mp" },
+        "darksideMs": { "kind": "timer", "provider": "drk.darkside_ms", "minimum": 0, "maximum": 60000, "unit": "milliseconds" },
+        "darkArts": { "kind": "boolean", "provider": "drk.dark_arts" },
+        "deliriumStep": { "kind": "integer", "provider": "drk.delirium_step", "minimum": 0 }
       },
       "combos": {
         "souleater": {
-          "steps": [
-            "hardSlash",
-            "syphonStrike",
-            "souleater"
-          ],
+          "steps": ["hardSlash", "syphonStrike", "souleater"],
           "minimumLevel": 26,
           "breaksOnOtherGcd": true
         }
@@ -300,16 +57,10 @@
           "lane": "gcd",
           "priority": 1200,
           "action": "livingShadow",
-          "adjustedActions": [
-            "disesteem"
-          ],
+          "adjustedActions": ["disesteem"],
           "conditions": {
             "all": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "souleater"
-              }
+              { "source": "lastAction", "operator": "equal", "value": "souleater" }
             ]
           },
           "reason": "Use Disesteem after establishing the opener combo and burst buffs.",
@@ -321,11 +72,7 @@
           "lane": "gcd",
           "priority": 1100,
           "action": "bloodspiller",
-          "adjustedActions": [
-            "scarletDelirium",
-            "comeuppance",
-            "torcleaver"
-          ],
+          "adjustedActions": ["scarletDelirium", "comeuppance", "torcleaver"],
           "reason": "Continue the enhanced Delirium weaponskill chain.",
           "mistakeResponse": "keepProgress"
         },
@@ -337,11 +84,7 @@
           "action": "bloodspiller",
           "conditions": {
             "all": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "torcleaver"
-              }
+              { "source": "lastAction", "operator": "equal", "value": "torcleaver" }
             ]
           },
           "reason": "Finish the burst GCD sequence with Bloodspiller.",
@@ -355,11 +98,7 @@
           "action": "unmend",
           "conditions": {
             "all": [
-              {
-                "source": "acceptedActionCount",
-                "operator": "equal",
-                "value": 0
-              }
+              { "source": "acceptedActionCount", "operator": "equal", "value": 0 }
             ]
           },
           "reason": "Begin the standard training-dummy opener with Unmend.",
@@ -396,17 +135,8 @@
           "action": "edgeOfShadow",
           "conditions": {
             "all": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "unmend"
-              },
-              {
-                "source": "stateValue",
-                "key": "mp",
-                "operator": "greaterThanOrEqual",
-                "value": 3000
-              }
+              { "source": "lastAction", "operator": "equal", "value": "unmend" },
+              { "source": "stateValue", "key": "mp", "operator": "greaterThanOrEqual", "value": 3000 }
             ]
           },
           "suggestionReason": "Weave Edge after Unmend to establish Darkside and begin spending MP."
@@ -420,11 +150,7 @@
           "cooldown": "livingShadow",
           "conditions": {
             "all": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "hardSlash"
-              }
+              { "source": "lastAction", "operator": "equal", "value": "hardSlash" }
             ]
           },
           "suggestionReason": "Deploy Living Shadow early so its damage lands inside the opening burst."
@@ -438,19 +164,10 @@
           "cooldown": "delirium",
           "conditions": {
             "all": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "souleater"
-              }
+              { "source": "lastAction", "operator": "equal", "value": "souleater" }
             ],
             "none": [
-              {
-                "source": "statusActive",
-                "key": "delirium",
-                "operator": "equal",
-                "value": true
-              }
+              { "source": "statusActive", "key": "delirium", "operator": "equal", "value": true }
             ]
           },
           "suggestionReason": "Weave Delirium after Souleater to begin the enhanced burst chain."
@@ -464,11 +181,7 @@
           "cooldown": "carveAndSpit",
           "conditions": {
             "all": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "disesteem"
-              }
+              { "source": "lastAction", "operator": "equal", "value": "disesteem" }
             ]
           },
           "suggestionReason": "Use Carve and Spit in the first burst weave window."
@@ -481,17 +194,8 @@
           "action": "edgeOfShadow",
           "conditions": {
             "all": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "disesteem"
-              },
-              {
-                "source": "stateValue",
-                "key": "mp",
-                "operator": "greaterThanOrEqual",
-                "value": 3000
-              }
+              { "source": "lastAction", "operator": "equal", "value": "disesteem" },
+              { "source": "stateValue", "key": "mp", "operator": "greaterThanOrEqual", "value": 3000 }
             ]
           },
           "suggestionReason": "Spend MP with Edge in the Disesteem weave window."
@@ -505,16 +209,8 @@
           "cooldown": "shadowbringer",
           "conditions": {
             "any": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "scarletDelirium"
-              },
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "torcleaver"
-              }
+              { "source": "lastAction", "operator": "equal", "value": "scarletDelirium" },
+              { "source": "lastAction", "operator": "equal", "value": "torcleaver" }
             ]
           },
           "suggestionReason": "Spend a Shadowbringer charge inside the burst sequence."
@@ -528,11 +224,7 @@
           "cooldown": "saltedEarth",
           "conditions": {
             "all": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "comeuppance"
-              }
+              { "source": "lastAction", "operator": "equal", "value": "comeuppance" }
             ]
           },
           "suggestionReason": "Place Salted Earth in the middle of the opening burst."
@@ -545,24 +237,11 @@
           "action": "edgeOfShadow",
           "conditions": {
             "all": [
-              {
-                "source": "stateValue",
-                "key": "mp",
-                "operator": "greaterThanOrEqual",
-                "value": 3000
-              }
+              { "source": "stateValue", "key": "mp", "operator": "greaterThanOrEqual", "value": 3000 }
             ],
             "any": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "scarletDelirium"
-              },
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "comeuppance"
-              }
+              { "source": "lastAction", "operator": "equal", "value": "scarletDelirium" },
+              { "source": "lastAction", "operator": "equal", "value": "comeuppance" }
             ]
           },
           "suggestionReason": "Spend available MP with Edge during the Delirium chain."
@@ -573,16 +252,10 @@
           "lane": "weave",
           "priority": 1080,
           "action": "saltedEarth",
-          "adjustedActions": [
-            "saltAndDarkness"
-          ],
+          "adjustedActions": ["saltAndDarkness"],
           "conditions": {
             "all": [
-              {
-                "source": "lastAction",
-                "operator": "equal",
-                "value": "bloodspiller"
-              }
+              { "source": "lastAction", "operator": "equal", "value": "bloodspiller" }
             ]
           },
           "suggestionReason": "Detonate Salted Earth with Salt and Darkness after the burst Bloodspiller."
@@ -595,12 +268,7 @@
           "action": "edgeOfShadow",
           "conditions": {
             "all": [
-              {
-                "source": "stateValue",
-                "key": "darkArts",
-                "operator": "equal",
-                "value": true
-              }
+              { "source": "stateValue", "key": "darkArts", "operator": "equal", "value": true }
             ]
           },
           "suggestionReason": "Use the free Dark Arts Edge before it is overwritten."
@@ -623,18 +291,8 @@
           "action": "edgeOfShadow",
           "conditions": {
             "all": [
-              {
-                "source": "stateValue",
-                "key": "darksideMs",
-                "operator": "lessThanOrEqual",
-                "value": 10000
-              },
-              {
-                "source": "stateValue",
-                "key": "mp",
-                "operator": "greaterThanOrEqual",
-                "value": 3000
-              }
+              { "source": "stateValue", "key": "darksideMs", "operator": "lessThanOrEqual", "value": 10000 },
+              { "source": "stateValue", "key": "mp", "operator": "greaterThanOrEqual", "value": 3000 }
             ]
           },
           "suggestionReason": "Refresh Darkside with Edge before it expires."
@@ -648,11 +306,7 @@
           "cooldown": "livingShadow",
           "conditions": {
             "all": [
-              {
-                "source": "combatTimeSeconds",
-                "operator": "greaterThanOrEqual",
-                "value": 10
-              }
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
             ]
           },
           "suggestionReason": "Living Shadow is ready; use it promptly for maximum uses."
@@ -666,19 +320,10 @@
           "cooldown": "delirium",
           "conditions": {
             "all": [
-              {
-                "source": "combatTimeSeconds",
-                "operator": "greaterThanOrEqual",
-                "value": 10
-              }
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
             ],
             "none": [
-              {
-                "source": "statusActive",
-                "key": "delirium",
-                "operator": "equal",
-                "value": true
-              }
+              { "source": "statusActive", "key": "delirium", "operator": "equal", "value": true }
             ]
           },
           "suggestionReason": "Delirium is ready; use it promptly to preserve burst-cycle uses."
@@ -692,11 +337,7 @@
           "cooldown": "carveAndSpit",
           "conditions": {
             "all": [
-              {
-                "source": "combatTimeSeconds",
-                "operator": "greaterThanOrEqual",
-                "value": 10
-              }
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
             ]
           },
           "suggestionReason": "Carve and Spit is ready; avoid losing a use."
@@ -709,6 +350,11 @@
           "action": "shadowbringer",
           "cooldown": "shadowbringer",
           "threshold": 2,
+          "conditions": {
+            "all": [
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
+            ]
+          },
           "suggestionReason": "Spend a Shadowbringer charge before charge recovery is wasted."
         },
         {
@@ -720,11 +366,7 @@
           "cooldown": "saltedEarth",
           "conditions": {
             "all": [
-              {
-                "source": "combatTimeSeconds",
-                "operator": "greaterThanOrEqual",
-                "value": 10
-              }
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
             ]
           },
           "suggestionReason": "Salted Earth is ready; place it without unnecessary drift."
