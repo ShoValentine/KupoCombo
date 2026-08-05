@@ -30,6 +30,13 @@
       <Visible>false</Visible>
     </Content>
 
+    <Content Include="..\Data\Actions\*.json">
+      <Link>Actions\%(Filename)%(Extension)</Link>
+      <TargetPath>Actions\%(Filename)%(Extension)</TargetPath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </Content>
+
     <Content Include="..\Data\Schemas\*.json">
       <Link>Schemas\%(Filename)%(Extension)</Link>
       <TargetPath>Schemas\%(Filename)%(Extension)</TargetPath>
