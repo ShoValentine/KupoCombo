@@ -40,10 +40,15 @@ public sealed class TrainingActionResult
 
 public sealed class TrainingSession
 {
-    private const int ForecastGcdCount = 12;
+    private const int ForecastViewportGcdCount = 12;
     private const int CommittedGcdDepth = 2;
 
+    private static readonly TimeSpan PlanRefreshInterval =
+        TimeSpan.FromMilliseconds(500);
+
+    private readonly Queue<PendingMpAction> pendingMpActions = new();
     private bool hasReceivedLiveState;
+    private DateTime nextPlanRefreshUtc = DateTime.MinValue;
 
     public ITrainingPolicy? Policy { get; private set; }
 
@@ -53,6 +58,8 @@ public sealed class TrainingSession
     public TrainingState Snapshot { get; } = new();
 
     public TrainingDecision? CurrentDecision { get; private set; }
+
+    public PracticePlan CurrentPlan { get; private set; } = PracticePlan.Empty;
 
     public IReadOnlyList<TrainingForecastStep> CurrentForecast
     {
@@ -68,6 +75,13 @@ public sealed class TrainingSession
     public uint LastIncorrectActionId { get; private set; }
 
     public uint LastExpectedActionId { get; private set; }
+
+    public RotationPhase CurrentPhase =>
+        CurrentForecast.FirstOrDefault()?.Phase
+        ?? CurrentPlan.CurrentPhase;
+
+    public IReadOnlyList<MpTransaction> MpTransactions =>
+        Snapshot.MpTransactions;
 
     public bool IsActive =>
         State == TrainingSessionState.Armed ||
@@ -94,10 +108,37 @@ public sealed class TrainingSession
         LastIncorrectActionId = 0;
         LastExpectedActionId = 0;
         hasReceivedLiveState = false;
+        nextPlanRefreshUtc = DateTime.MinValue;
+        pendingMpActions.Clear();
+        CurrentPlan = PracticePlan.Empty;
         RecalculateDecision();
         State = CurrentDecision?.IsComplete == true
             ? TrainingSessionState.Complete
             : TrainingSessionState.Armed;
+    }
+
+    public void ObserveAction(uint actionId)
+    {
+        if (!IsActive || Policy == null)
+        {
+            return;
+        }
+
+        var isKnownAction =
+            Contains(Policy.TrackedActionIds, actionId) ||
+            Contains(Policy.AdvisoryActionIds, actionId);
+
+        if (!isKnownAction)
+        {
+            return;
+        }
+
+        var expectedMpDelta = Policy is IPracticePlanPolicy planPolicy
+            ? planPolicy.GetExpectedMpDelta(actionId, Snapshot)
+            : 0;
+
+        pendingMpActions.Enqueue(
+            new PendingMpAction(actionId, expectedMpDelta));
     }
 
     public void RefreshState(Action<TrainingState> refresh)
@@ -107,7 +148,15 @@ public sealed class TrainingSession
             return;
         }
 
+        var hadLiveState = hasReceivedLiveState;
+        var mpBefore = Snapshot.GetGauge("mp");
         refresh(Snapshot);
+        var mpAfter = Snapshot.GetGauge("mp");
+
+        if (hadLiveState)
+        {
+            RecordMpObservation(mpBefore, mpAfter);
+        }
 
         if (!hasReceivedLiveState)
         {
@@ -133,11 +182,14 @@ public sealed class TrainingSession
     {
         Policy = null;
         CurrentDecision = null;
+        CurrentPlan = PracticePlan.Empty;
         CurrentForecast = Array.Empty<TrainingForecastStep>();
         Snapshot.Clear();
         LastIncorrectActionId = 0;
         LastExpectedActionId = 0;
         hasReceivedLiveState = false;
+        nextPlanRefreshUtc = DateTime.MinValue;
+        pendingMpActions.Clear();
         State = TrainingSessionState.Stopped;
     }
 
@@ -253,28 +305,79 @@ public sealed class TrainingSession
         };
     }
 
+    private void RecordMpObservation(int mpBefore, int mpAfter)
+    {
+        var pendingActions = pendingMpActions.ToArray();
+        pendingMpActions.Clear();
+        var observedDelta = mpAfter - mpBefore;
+
+        if (pendingActions.Length == 0 && observedDelta == 0)
+        {
+            return;
+        }
+
+        var expectedDelta = pendingActions.Sum(action => action.ExpectedMpDelta);
+        var kind = pendingActions.Length > 0
+            ? MpTransactionKind.ActionWindow
+            : observedDelta > 0
+                ? MpTransactionKind.PassiveRecovery
+                : MpTransactionKind.Reconciliation;
+
+        Snapshot.RecordMpTransaction(
+            new MpTransaction
+            {
+                Kind = kind,
+                ActionIds = pendingActions
+                    .Select(action => action.ActionId)
+                    .ToArray(),
+                BeforeMp = mpBefore,
+                AfterMp = mpAfter,
+                ExpectedDelta = expectedDelta
+            });
+    }
+
     private void RecalculateDecision()
     {
         if (Policy == null)
         {
             CurrentDecision = null;
+            CurrentPlan = PracticePlan.Empty;
             CurrentForecast = Array.Empty<TrainingForecastStep>();
             return;
         }
 
         CurrentDecision = Policy.Evaluate(Snapshot);
 
-        if (CurrentDecision.IsComplete ||
-            Policy is not ITrainingForecastPolicy forecastPolicy)
+        if (CurrentDecision.IsComplete)
         {
+            CurrentPlan = PracticePlan.Empty;
             CurrentForecast = Array.Empty<TrainingForecastStep>();
             return;
         }
 
-        CurrentForecast = Reindex(
-            forecastPolicy.Forecast(
-                Snapshot,
-                ForecastGcdCount));
+        if (Policy is IPracticePlanPolicy planPolicy)
+        {
+            CurrentPlan = ReindexPlan(
+                planPolicy.BuildPracticePlan(Snapshot));
+            CurrentForecast = CurrentPlan.Steps
+                .Take(ForecastViewportGcdCount)
+                .ToArray();
+            nextPlanRefreshUtc = DateTime.UtcNow + PlanRefreshInterval;
+            return;
+        }
+
+        if (Policy is ITrainingForecastPolicy forecastPolicy)
+        {
+            CurrentPlan = PracticePlan.Empty;
+            CurrentForecast = Reindex(
+                forecastPolicy.Forecast(
+                    Snapshot,
+                    ForecastViewportGcdCount));
+            return;
+        }
+
+        CurrentPlan = PracticePlan.Empty;
+        CurrentForecast = Array.Empty<TrainingForecastStep>();
     }
 
     private void ReconcileForecastWithoutBreakingCommitment()
@@ -286,44 +389,82 @@ public sealed class TrainingSession
             return;
         }
 
-        var freshDecision = Policy.Evaluate(Snapshot);
-        var freshForecast = forecastPolicy.Forecast(
-            Snapshot,
-            ForecastGcdCount);
-
-        if (CurrentDecision == null ||
-            CurrentForecast.Count == 0)
+        if (Policy is IPracticePlanPolicy &&
+            DateTime.UtcNow < nextPlanRefreshUtc)
         {
-            CurrentDecision = freshDecision;
-            CurrentForecast = Reindex(freshForecast);
             return;
         }
 
-        if (freshDecision.IsComplete || freshForecast.Count == 0)
+        var freshDecision = Policy.Evaluate(Snapshot);
+        PracticePlan freshPlan;
+        IReadOnlyList<TrainingForecastStep> freshSteps;
+
+        if (Policy is IPracticePlanPolicy planPolicy)
+        {
+            freshPlan = ReindexPlan(planPolicy.BuildPracticePlan(Snapshot));
+            freshSteps = freshPlan.Steps;
+            nextPlanRefreshUtc = DateTime.UtcNow + PlanRefreshInterval;
+        }
+        else
+        {
+            freshPlan = PracticePlan.Empty;
+            freshSteps = Reindex(
+                forecastPolicy.Forecast(
+                    Snapshot,
+                    ForecastViewportGcdCount));
+        }
+
+        var currentSteps = !CurrentPlan.IsEmpty
+            ? CurrentPlan.Steps
+            : CurrentForecast;
+
+        if (CurrentDecision == null || currentSteps.Count == 0)
+        {
+            CurrentDecision = freshDecision;
+            CurrentPlan = freshPlan;
+            CurrentForecast = freshSteps
+                .Take(ForecastViewportGcdCount)
+                .ToArray();
+            return;
+        }
+
+        if (freshDecision.IsComplete || freshSteps.Count == 0)
         {
             return;
         }
 
         var committedDepth = Math.Min(
             CommittedGcdDepth,
-            Math.Min(CurrentForecast.Count, freshForecast.Count));
+            Math.Min(currentSteps.Count, freshSteps.Count));
 
         for (var index = 0; index < committedDepth; index++)
         {
-            if (CurrentForecast[index].GcdActionId !=
-                freshForecast[index].GcdActionId)
+            if (currentSteps[index].GcdActionId !=
+                freshSteps[index].GcdActionId)
             {
                 return;
             }
         }
 
-        var merged = CurrentForecast
-            .Take(committedDepth)
-            .Concat(freshForecast.Skip(committedDepth))
-            .Take(ForecastGcdCount)
-            .ToArray();
+        var mergedSteps = Reindex(
+            currentSteps
+                .Take(committedDepth)
+                .Concat(freshSteps.Skip(committedDepth)));
 
-        CurrentForecast = Reindex(merged);
+        if (!freshPlan.IsEmpty)
+        {
+            CurrentPlan = freshPlan.WithSteps(mergedSteps);
+            CurrentForecast = CurrentPlan.Steps
+                .Take(ForecastViewportGcdCount)
+                .ToArray();
+        }
+        else
+        {
+            CurrentPlan = PracticePlan.Empty;
+            CurrentForecast = mergedSteps
+                .Take(ForecastViewportGcdCount)
+                .ToArray();
+        }
 
         var committedHead = CurrentForecast[0];
         CurrentDecision = new TrainingDecision
@@ -361,34 +502,60 @@ public sealed class TrainingSession
             MistakeResponse = CurrentDecision.MistakeResponse
         };
 
-        if (CurrentForecast.Count == 0)
+        var sourceSteps = !CurrentPlan.IsEmpty
+            ? CurrentPlan.Steps
+            : CurrentForecast;
+
+        if (sourceSteps.Count == 0)
         {
             return;
         }
 
-        var head = CurrentForecast[0];
-        var replacement = new TrainingForecastStep
-        {
-            Offset = 0,
-            GcdActionId = head.GcdActionId,
-            SuggestedActionIds = head.SuggestedActionIds
+        var head = sourceSteps[0];
+        var replacement = CopyStep(
+            head,
+            suggestedActionIds: head.SuggestedActionIds
                 .Where(candidate => candidate != actionId)
-                .ToArray(),
-            Reason = head.Reason,
-            SuggestionReason = head.SuggestionReason,
-            Confidence = head.Confidence
-        };
-
-        CurrentForecast = Reindex(
-            new[] { replacement }
-                .Concat(CurrentForecast.Skip(1))
                 .ToArray());
+        var updatedSteps = Reindex(
+            new[] { replacement }
+                .Concat(sourceSteps.Skip(1)));
+
+        if (!CurrentPlan.IsEmpty)
+        {
+            CurrentPlan = CurrentPlan.WithSteps(updatedSteps);
+            CurrentForecast = CurrentPlan.Steps
+                .Take(ForecastViewportGcdCount)
+                .ToArray();
+        }
+        else
+        {
+            CurrentForecast = updatedSteps
+                .Take(ForecastViewportGcdCount)
+                .ToArray();
+        }
     }
 
     private void AdvanceCommittedForecast()
     {
-        CurrentForecast = Reindex(
-            CurrentForecast.Skip(1).ToArray());
+        var sourceSteps = !CurrentPlan.IsEmpty
+            ? CurrentPlan.Steps
+            : CurrentForecast;
+        var remainingSteps = Reindex(sourceSteps.Skip(1));
+
+        if (!CurrentPlan.IsEmpty)
+        {
+            CurrentPlan = CurrentPlan.WithSteps(remainingSteps);
+            CurrentForecast = CurrentPlan.Steps
+                .Take(ForecastViewportGcdCount)
+                .ToArray();
+        }
+        else
+        {
+            CurrentForecast = remainingSteps
+                .Take(ForecastViewportGcdCount)
+                .ToArray();
+        }
 
         if (CurrentForecast.Count == 0)
         {
@@ -408,20 +575,51 @@ public sealed class TrainingSession
         };
     }
 
+    private static PracticePlan ReindexPlan(PracticePlan plan)
+    {
+        return plan.WithSteps(Reindex(plan.Steps));
+    }
+
     private static IReadOnlyList<TrainingForecastStep> Reindex(
         IEnumerable<TrainingForecastStep> forecast)
     {
-        return forecast
-            .Select((step, index) => new TrainingForecastStep
-            {
-                Offset = index,
-                GcdActionId = step.GcdActionId,
-                SuggestedActionIds = step.SuggestedActionIds,
-                Reason = step.Reason,
-                SuggestionReason = step.SuggestionReason,
-                Confidence = step.Confidence
-            })
-            .ToArray();
+        var result = new List<TrainingForecastStep>();
+        var startsAtSeconds = 0d;
+
+        foreach (var step in forecast)
+        {
+            var copy = CopyStep(
+                step,
+                offset: result.Count,
+                startsAtSeconds: startsAtSeconds);
+            result.Add(copy);
+            startsAtSeconds += Math.Max(0f, copy.DurationSeconds);
+        }
+
+        return result;
+    }
+
+    private static TrainingForecastStep CopyStep(
+        TrainingForecastStep step,
+        int? offset = null,
+        double? startsAtSeconds = null,
+        IReadOnlyList<uint>? suggestedActionIds = null)
+    {
+        return new TrainingForecastStep
+        {
+            Offset = offset ?? step.Offset,
+            StartsAtSeconds = startsAtSeconds ?? step.StartsAtSeconds,
+            DurationSeconds = step.DurationSeconds,
+            Phase = step.Phase,
+            GcdActionId = step.GcdActionId,
+            SuggestedActionIds = suggestedActionIds
+                ?? step.SuggestedActionIds,
+            ExpectedMpBefore = step.ExpectedMpBefore,
+            ExpectedMpAfter = step.ExpectedMpAfter,
+            Reason = step.Reason,
+            SuggestionReason = step.SuggestionReason,
+            Confidence = step.Confidence
+        };
     }
 
     private static bool Contains(
@@ -447,4 +645,8 @@ public sealed class TrainingSession
             UsedActionId = actionId
         };
     }
+
+    private sealed record PendingMpAction(
+        uint ActionId,
+        int ExpectedMpDelta);
 }
