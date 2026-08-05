@@ -78,6 +78,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public SequenceDefinition? SelectedSequence { get; private set; }
 
+    public RulePolicyDefinition? CurrentRulePolicy { get; private set; }
+
     public string CurrentJob { get; private set; } = string.Empty;
 
     public int CurrentSequenceLength =>
@@ -95,6 +97,8 @@ public sealed class Plugin : IDalamudPlugin
     public bool IsSequenceComplete => TrainingSession.IsComplete;
 
     public bool IsDynamicPractice => TrainingSession.IsEndless;
+
+    public bool HasDynamicPractice => CurrentRulePolicy != null;
 
     public int CurrentStep => TrainingSession.CurrentStep;
 
@@ -159,7 +163,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 HelpMessage =
                     "Open KupoCombo. Use /kupocombo refresh " +
-                    "to reload the current job's sequences and guidance."
+                    "to reload the current job's sequences, guidance, and policy."
             });
 
         PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
@@ -201,16 +205,24 @@ public sealed class Plugin : IDalamudPlugin
 
     public void StartDynamicPractice()
     {
-        if (!CurrentJob.Equals("DRK", StringComparison.OrdinalIgnoreCase))
+        var definition = CurrentRulePolicy;
+
+        if (definition == null)
         {
             ChatGui.PrintError(
-                "The conditional practice preview is currently available for DRK only.",
+                $"No conditional practice policy is available for {CurrentJob}.",
                 "KupoCombo");
             return;
         }
 
+        var effectiveLevel = PlayerState.IsLoaded
+            ? PlayerState.EffectiveLevel
+            : definition.MinimumLevel;
+
         SelectedSequence = null;
-        TrainingSession.Start(new DarkKnightComboPolicy());
+        TrainingSession.Start(
+            new RuleSetTrainingPolicy(definition),
+            Math.Max(effectiveLevel, definition.MinimumLevel));
         RefreshTrainingState();
         OverlayWindow.IsOpen = true;
 
@@ -218,12 +230,14 @@ public sealed class Plugin : IDalamudPlugin
             new TrainingPrompt
             {
                 Text =
-                    "Endless DRK priority practice started. " +
-                    "KupoCombo is now reading live combo and Blood state.",
+                    $"Endless {definition.Job} priority practice started. " +
+                    "KupoCombo is reading live job state and evaluating data-driven rules.",
                 DurationSeconds = 5f
             });
 
-        Log.Information("Started DRK conditional priority practice.");
+        Log.Information(
+            $"Started {definition.Job} conditional priority practice " +
+            $"with policy '{definition.Id}'.");
     }
 
     public void StopTraining()
@@ -484,6 +498,7 @@ public sealed class Plugin : IDalamudPlugin
         Sequences = Array.Empty<SequenceDefinition>();
         Guidance = new GuidanceFile();
         SelectedSequence = null;
+        CurrentRulePolicy = null;
         ResetTrainingState();
 
         if (string.IsNullOrWhiteSpace(CurrentJob))
@@ -493,7 +508,57 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         Log.Information($"Current job changed to {CurrentJob}.");
+        LoadCurrentRulePolicy(preserveExistingOnFailure: false);
         LoadCurrentJobData(preserveExistingOnFailure: false);
+    }
+
+    private bool LoadCurrentRulePolicy(bool preserveExistingOnFailure)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentJob))
+        {
+            return false;
+        }
+
+        var effectiveLevel = PlayerState.IsLoaded
+            ? PlayerState.EffectiveLevel
+            : 0;
+
+        try
+        {
+            CurrentRulePolicy = RulePolicyRuntimeLoader.LoadBestProfile(
+                CurrentJob,
+                effectiveLevel);
+
+            Log.Information(
+                $"Loaded {CurrentJob} rule policy " +
+                $"'{CurrentRulePolicy.Id}'.");
+            return true;
+        }
+        catch (FileNotFoundException)
+        {
+            Log.Information(
+                $"No rule policy file exists for {CurrentJob}.");
+
+            if (!preserveExistingOnFailure)
+            {
+                CurrentRulePolicy = null;
+            }
+
+            return false;
+        }
+        catch (Exception exception)
+        {
+            Log.Error(
+                exception,
+                $"Failed to load {CurrentJob} rule policy.");
+
+            if (!preserveExistingOnFailure)
+            {
+                CurrentRulePolicy = null;
+            }
+
+            return false;
+        }
     }
 
     private bool LoadCurrentJobData(bool preserveExistingOnFailure)
@@ -576,10 +641,28 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        if (LoadCurrentJobData(preserveExistingOnFailure: true))
+        var policyReloaded = LoadCurrentRulePolicy(
+            preserveExistingOnFailure: true);
+        var sequencesReloaded = LoadCurrentJobData(
+            preserveExistingOnFailure: true);
+
+        if (policyReloaded || sequencesReloaded)
         {
+            var loadedParts = new List<string>();
+
+            if (policyReloaded)
+            {
+                loadedParts.Add("rule policy");
+            }
+
+            if (sequencesReloaded)
+            {
+                loadedParts.Add(
+                    $"{Sequences.Count} sequence(s) and guidance");
+            }
+
             ChatGui.Print(
-                $"Reloaded {Sequences.Count} {CurrentJob} sequences and guidance.",
+                $"Reloaded {CurrentJob} {string.Join(" and ", loadedParts)}.",
                 "KupoCombo");
             return;
         }
