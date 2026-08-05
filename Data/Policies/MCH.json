@@ -1,0 +1,576 @@
+{
+  "schemaVersion": 1,
+  "policies": [
+    {
+      "id": "mch-standard-dummy-100",
+      "name": "Standard Training Dummy",
+      "job": "MCH",
+      "minimumLevel": 100,
+      "profile": {
+        "minimumTargetCount": 1,
+        "maximumTargetCount": 1,
+        "assumesContinuousUptime": true,
+        "burstCycleSeconds": 120,
+        "notes": "Level-100 single-target continuous-uptime fundamentals. Teaches tool cooldowns, Overheat, Wildfire pairing, Heat and Battery overcap prevention, and charge hygiene. Encounter downtime and encounter-specific burst drift are outside this profile."
+      },
+      "actions": {
+        "splitShot": {
+          "actionId": 2866,
+          "displayName": "Split Shot",
+          "lane": "gcd",
+          "role": "observed",
+          "minimumLevel": 1
+        },
+        "slugShot": {
+          "actionId": 2868,
+          "displayName": "Slug Shot",
+          "lane": "gcd",
+          "role": "observed",
+          "minimumLevel": 2
+        },
+        "cleanShot": {
+          "actionId": 2873,
+          "displayName": "Clean Shot",
+          "lane": "gcd",
+          "role": "observed",
+          "minimumLevel": 26
+        },
+        "heatedSplitShot": {
+          "actionId": 7411,
+          "displayName": "Heated Split Shot",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 54,
+          "adjustedFrom": "splitShot"
+        },
+        "heatedSlugShot": {
+          "actionId": 7412,
+          "displayName": "Heated Slug Shot",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 60,
+          "adjustedFrom": "slugShot"
+        },
+        "heatedCleanShot": {
+          "actionId": 7413,
+          "displayName": "Heated Clean Shot",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 64,
+          "adjustedFrom": "cleanShot"
+        },
+        "hotShot": {
+          "actionId": 2872,
+          "displayName": "Hot Shot",
+          "lane": "gcd",
+          "role": "observed",
+          "minimumLevel": 4
+        },
+        "airAnchor": {
+          "actionId": 16500,
+          "displayName": "Air Anchor",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 76,
+          "adjustedFrom": "hotShot"
+        },
+        "drill": {
+          "actionId": 16498,
+          "displayName": "Drill",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 58
+        },
+        "chainSaw": {
+          "actionId": 25788,
+          "displayName": "Chain Saw",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 90
+        },
+        "excavator": {
+          "actionId": 36981,
+          "displayName": "Excavator",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 96,
+          "adjustedFrom": "chainSaw"
+        },
+        "heatBlast": {
+          "actionId": 7410,
+          "displayName": "Heat Blast",
+          "lane": "gcd",
+          "role": "observed",
+          "minimumLevel": 35
+        },
+        "blazingShot": {
+          "actionId": 36978,
+          "displayName": "Blazing Shot",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 68,
+          "adjustedFrom": "heatBlast"
+        },
+        "fullMetalField": {
+          "actionId": 36982,
+          "displayName": "Full Metal Field",
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 100
+        },
+        "hypercharge": {
+          "actionId": 17209,
+          "displayName": "Hypercharge",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 30
+        },
+        "wildfire": {
+          "actionId": 2878,
+          "displayName": "Wildfire",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 45
+        },
+        "barrelStabilizer": {
+          "actionId": 7414,
+          "displayName": "Barrel Stabilizer",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 66
+        },
+        "rookAutoturret": {
+          "actionId": 2864,
+          "displayName": "Rook Autoturret",
+          "lane": "weave",
+          "role": "observed",
+          "minimumLevel": 40
+        },
+        "automatonQueen": {
+          "actionId": 16501,
+          "displayName": "Automaton Queen",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 80,
+          "adjustedFrom": "rookAutoturret"
+        },
+        "gaussRound": {
+          "actionId": 2874,
+          "displayName": "Gauss Round",
+          "lane": "weave",
+          "role": "observed",
+          "minimumLevel": 15
+        },
+        "doubleCheck": {
+          "actionId": 36979,
+          "displayName": "Double Check",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 92,
+          "adjustedFrom": "gaussRound"
+        },
+        "ricochet": {
+          "actionId": 2890,
+          "displayName": "Ricochet",
+          "lane": "weave",
+          "role": "observed",
+          "minimumLevel": 50
+        },
+        "checkmate": {
+          "actionId": 36980,
+          "displayName": "Checkmate",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 92,
+          "adjustedFrom": "ricochet"
+        },
+        "reassemble": {
+          "actionId": 2876,
+          "displayName": "Reassemble",
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 10
+        }
+      },
+      "statuses": {
+        "reassembled": 851,
+        "wildfirePlayer": 1946,
+        "hypercharged": 3864,
+        "excavatorReady": 3865,
+        "fullMetalMachinist": 3866
+      },
+      "stateInputs": {
+        "heat": {
+          "kind": "resource",
+          "provider": "mch.heat",
+          "minimum": 0,
+          "maximum": 100,
+          "unit": "gauge"
+        },
+        "battery": {
+          "kind": "resource",
+          "provider": "mch.battery",
+          "minimum": 0,
+          "maximum": 100,
+          "unit": "gauge"
+        },
+        "overheated": {
+          "kind": "boolean",
+          "provider": "mch.overheated"
+        },
+        "overheatMs": {
+          "kind": "timer",
+          "provider": "mch.overheat_ms",
+          "minimum": 0,
+          "unit": "milliseconds"
+        },
+        "robotActive": {
+          "kind": "boolean",
+          "provider": "mch.robot_active"
+        },
+        "summonMs": {
+          "kind": "timer",
+          "provider": "mch.summon_ms",
+          "minimum": 0,
+          "unit": "milliseconds"
+        }
+      },
+      "combos": {
+        "heatedCombo": {
+          "steps": [
+            "heatedSplitShot",
+            "heatedSlugShot",
+            "heatedCleanShot"
+          ],
+          "minimumLevel": 64,
+          "breaksOnOtherGcd": true
+        }
+      },
+      "rules": [
+        {
+          "id": "use-full-metal-field",
+          "type": "followProc",
+          "lane": "gcd",
+          "priority": 1100,
+          "action": "fullMetalField",
+          "status": "fullMetalMachinist",
+          "reason": "Use Full Metal Field while Full Metal Machinist is active.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "follow-excavator",
+          "type": "followAdjustedAction",
+          "lane": "gcd",
+          "priority": 1050,
+          "action": "chainSaw",
+          "adjustedActions": [
+            "excavator"
+          ],
+          "reason": "Use Excavator while it is replacing Chain Saw.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "continue-overheat",
+          "type": "useAction",
+          "lane": "gcd",
+          "priority": 1000,
+          "action": "blazingShot",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "reason": "Continue the active Overheat window with Blazing Shot.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "prevent-drill-charge-overcap",
+          "type": "preventChargeOvercap",
+          "lane": "gcd",
+          "priority": 950,
+          "action": "drill",
+          "cooldown": "drill",
+          "threshold": 2,
+          "reason": "Use Drill before both charges remain capped.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "use-air-anchor",
+          "type": "useCooldown",
+          "lane": "gcd",
+          "priority": 900,
+          "action": "airAnchor",
+          "cooldown": "airAnchor",
+          "reason": "Use Air Anchor when it is ready.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "use-chain-saw",
+          "type": "useCooldown",
+          "lane": "gcd",
+          "priority": 850,
+          "action": "chainSaw",
+          "cooldown": "chainSaw",
+          "reason": "Use Chain Saw when it is ready.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "use-drill",
+          "type": "useCooldown",
+          "lane": "gcd",
+          "priority": 800,
+          "action": "drill",
+          "cooldown": "drill",
+          "reason": "Use Drill when it is ready.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "continue-heated-combo",
+          "type": "continueCombo",
+          "lane": "gcd",
+          "priority": 100,
+          "combo": "heatedCombo",
+          "reason": "Continue the heated weaponskill combo.",
+          "mistakeResponse": "keepProgress"
+        },
+        {
+          "id": "use-barrel-stabilizer",
+          "type": "useCooldown",
+          "lane": "weave",
+          "priority": 1000,
+          "action": "barrelStabilizer",
+          "cooldown": "barrelStabilizer",
+          "conditions": {
+            "all": [
+              {
+                "source": "acceptedActionCount",
+                "operator": "greaterThan",
+                "value": 0
+              }
+            ]
+          },
+          "suggestionReason": "Use Barrel Stabilizer to prepare Full Metal Field and a free Hypercharge."
+        },
+        {
+          "id": "use-wildfire",
+          "type": "useCooldown",
+          "lane": "weave",
+          "priority": 950,
+          "action": "wildfire",
+          "cooldown": "wildfire",
+          "conditions": {
+            "all": [
+              {
+                "source": "acceptedActionCount",
+                "operator": "greaterThan",
+                "value": 0
+              }
+            ],
+            "none": [
+              {
+                "source": "statusActive",
+                "key": "wildfirePlayer",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Apply Wildfire before entering the paired Overheat window."
+        },
+        {
+          "id": "hypercharge-during-wildfire",
+          "type": "followProc",
+          "lane": "weave",
+          "priority": 900,
+          "action": "hypercharge",
+          "status": "wildfirePlayer",
+          "conditions": {
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Enter Hypercharge while Wildfire is active."
+        },
+        {
+          "id": "spend-hypercharged-proc",
+          "type": "followProc",
+          "lane": "weave",
+          "priority": 850,
+          "action": "hypercharge",
+          "status": "hypercharged",
+          "conditions": {
+            "none": [
+              {
+                "source": "statusActive",
+                "key": "fullMetalMachinist",
+                "operator": "equal",
+                "value": true
+              },
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Use the free Hypercharge granted by Barrel Stabilizer after Full Metal Field."
+        },
+        {
+          "id": "prevent-heat-overcap",
+          "type": "preventResourceOvercap",
+          "lane": "weave",
+          "priority": 800,
+          "action": "hypercharge",
+          "resource": "heat",
+          "threshold": 90,
+          "conditions": {
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Spend Heat with Hypercharge before the gauge overcaps."
+        },
+        {
+          "id": "prevent-battery-overcap",
+          "type": "preventResourceOvercap",
+          "lane": "weave",
+          "priority": 750,
+          "action": "automatonQueen",
+          "resource": "battery",
+          "threshold": 90,
+          "conditions": {
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "robotActive",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Deploy Automaton Queen before Battery overcaps."
+        },
+        {
+          "id": "deploy-queen-before-air-anchor",
+          "type": "useAction",
+          "lane": "weave",
+          "priority": 740,
+          "action": "automatonQueen",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "battery",
+                "operator": "greaterThanOrEqual",
+                "value": 80
+              },
+              {
+                "source": "cooldownReady",
+                "key": "airAnchor",
+                "operator": "equal",
+                "value": true
+              }
+            ],
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "robotActive",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Deploy Automaton Queen before Air Anchor adds Battery."
+        },
+        {
+          "id": "deploy-queen-before-chain-saw",
+          "type": "useAction",
+          "lane": "weave",
+          "priority": 730,
+          "action": "automatonQueen",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "battery",
+                "operator": "greaterThanOrEqual",
+                "value": 80
+              },
+              {
+                "source": "cooldownReady",
+                "key": "chainSaw",
+                "operator": "equal",
+                "value": true
+              }
+            ],
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "robotActive",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Deploy Automaton Queen before Chain Saw adds Battery."
+        },
+        {
+          "id": "prevent-double-check-charge-overcap",
+          "type": "preventChargeOvercap",
+          "lane": "weave",
+          "priority": 620,
+          "action": "doubleCheck",
+          "cooldown": "doubleCheck",
+          "threshold": 3,
+          "suggestionReason": "Spend a Double Check charge before all three remain capped."
+        },
+        {
+          "id": "prevent-checkmate-charge-overcap",
+          "type": "preventChargeOvercap",
+          "lane": "weave",
+          "priority": 610,
+          "action": "checkmate",
+          "cooldown": "checkmate",
+          "threshold": 3,
+          "suggestionReason": "Spend a Checkmate charge before all three remain capped."
+        },
+        {
+          "id": "prevent-reassemble-charge-overcap",
+          "type": "preventChargeOvercap",
+          "lane": "weave",
+          "priority": 600,
+          "action": "reassemble",
+          "cooldown": "reassemble",
+          "threshold": 2,
+          "conditions": {
+            "none": [
+              {
+                "source": "statusActive",
+                "key": "reassembled",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Spend a Reassemble charge before both charges remain capped."
+        }
+      ]
+    }
+  ]
+}
