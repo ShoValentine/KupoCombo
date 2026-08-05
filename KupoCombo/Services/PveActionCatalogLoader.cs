@@ -65,6 +65,14 @@ public static class PveActionCatalogLoader
                 action.MinimumLevel = entry.MinimumLevel;
             }
 
+            action.Kind = entry.Kind;
+            action.CastSeconds = entry.CastSeconds;
+            action.RecastSeconds = entry.RecastSeconds;
+            action.TimelineLockSeconds = entry.TimelineLockSeconds;
+            action.MaximumCharges = entry.MaximumCharges;
+            action.Potency = entry.Potency;
+            action.ComboPotency = entry.ComboPotency;
+            action.MpCost = entry.MpCost;
             action.ForecastEffects = entry.ForecastEffects
                 .Select(CloneEffect)
                 .ToList();
@@ -129,6 +137,7 @@ public static class PveActionCatalogLoader
                 action.MinimumLevel < 1 ||
                 action.CastSeconds < 0d ||
                 action.RecastSeconds < 0d ||
+                action.TimelineLockSeconds < 0d ||
                 action.MaximumCharges < 1)
             {
                 throw new InvalidDataException(
