@@ -198,11 +198,11 @@ public unsafe sealed class TrainingStateReader
         state.SetStateValue("overheated", gauge.IsOverheated ? 1d : 0d);
         state.SetStateValue(
             "overheat_ms",
-            Math.Max(0, gauge.OverheatTimeRemaining));
+            Math.Max(0, (int)gauge.OverheatTimeRemaining));
         state.SetStateValue("robot_active", gauge.IsRobotActive ? 1d : 0d);
         state.SetStateValue(
             "summon_ms",
-            Math.Max(0, gauge.SummonTimeRemaining));
+            Math.Max(0, (int)gauge.SummonTimeRemaining));
         state.SetGauge("last_summon_battery", gauge.LastSummonBatteryPower);
     }
 }
