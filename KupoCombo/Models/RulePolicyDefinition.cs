@@ -49,6 +49,14 @@ public sealed class PolicyProfileDefinition
 
     public int BurstCycleSeconds { get; set; } = 120;
 
+    public int MinorBurstCycleSeconds { get; set; } = 60;
+
+    public int OpenerDurationSeconds { get; set; } = 25;
+
+    public int BurstWindowSeconds { get; set; } = 20;
+
+    public int PoolingWindowSeconds { get; set; } = 15;
+
     public string Notes { get; set; } = string.Empty;
 }
 
