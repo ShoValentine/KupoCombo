@@ -4,6 +4,8 @@ using Dalamud.Game.ClientState.JobGauge.Types;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using KupoCombo.Models;
+using NativePlayerState = FFXIVClientStructs.FFXIV.Client.Game.UI.PlayerState;
+using PlayerAttribute = FFXIVClientStructs.FFXIV.Client.Game.UI.PlayerAttribute;
 
 namespace KupoCombo.Services;
 
@@ -47,6 +49,20 @@ public unsafe sealed class TrainingStateReader
 
     private void RefreshPlayer(TrainingState state)
     {
+        var nativePlayerState = NativePlayerState.Instance();
+
+        if (nativePlayerState != null && nativePlayerState->IsLoaded)
+        {
+            state.SetPlayerTiming(
+                nativePlayerState->GetAttributeByIndex(PlayerAttribute.SkillSpeed),
+                nativePlayerState->GetAttributeByIndex(PlayerAttribute.SpellSpeed),
+                nativePlayerState->GetAttributeByIndex(PlayerAttribute.Haste));
+        }
+        else
+        {
+            state.SetPlayerTiming(0, 0, 0);
+        }
+
         var localPlayer = objectTable.LocalPlayer;
 
         if (localPlayer == null)
@@ -100,9 +116,8 @@ public unsafe sealed class TrainingStateReader
 
         foreach (var actionId in actionIds)
         {
-            state.SetAdjustedAction(
-                actionId,
-                actionManager->GetAdjustedActionId(actionId));
+            var adjustedActionId = actionManager->GetAdjustedActionId(actionId);
+            state.SetAdjustedAction(actionId, adjustedActionId);
 
             var expectedMaximumCharges = GetExpectedMaximumCharges(
                 policy,
@@ -112,6 +127,21 @@ public unsafe sealed class TrainingStateReader
                 policy,
                 actionId,
                 state.Level);
+
+            var adjustedRecastMilliseconds = ActionManager.GetAdjustedRecastTime(
+                ActionType.Action,
+                adjustedActionId,
+                applyClassMechanics: true);
+            var adjustedRecastSeconds = adjustedRecastMilliseconds > 0
+                ? adjustedRecastMilliseconds / 1000f
+                : expectedRechargeSeconds;
+
+            state.SetAdjustedRecastSeconds(
+                actionId,
+                adjustedRecastSeconds);
+            state.SetAdjustedRecastSeconds(
+                adjustedActionId,
+                adjustedRecastSeconds);
 
             state.SetCooldown(
                 actionId,
