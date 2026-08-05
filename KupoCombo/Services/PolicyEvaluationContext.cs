@@ -141,9 +141,20 @@ internal sealed class PolicyEvaluationContext
             clamped = Math.Min(input.Maximum.Value, clamped);
         }
 
+        var providerLeaf = GetProviderLeaf(input.Provider);
+
+        if (input.Kind == PolicyStateValueKind.Resource)
+        {
+            var resourceValue = Convert.ToInt32(Math.Round(clamped));
+            state.SetGauge(alias, resourceValue);
+            state.SetGauge(providerLeaf, resourceValue);
+            state.SetStateValue(input.Provider, resourceValue);
+            return;
+        }
+
         state.SetStateValue(alias, clamped);
         state.SetStateValue(input.Provider, clamped);
-        state.SetStateValue(GetProviderLeaf(input.Provider), clamped);
+        state.SetStateValue(providerLeaf, clamped);
     }
 
     public double? GetStateMaximum(string alias)
