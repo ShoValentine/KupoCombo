@@ -39,6 +39,10 @@ public unsafe sealed class TrainingStateReader
         {
             RefreshDarkKnight(state);
         }
+        else if (policy.Job.Equals("MCH", StringComparison.OrdinalIgnoreCase))
+        {
+            RefreshMachinist(state);
+        }
     }
 
     private void RefreshPlayer(TrainingState state)
@@ -183,5 +187,22 @@ public unsafe sealed class TrainingStateReader
         state.SetGauge(
             "delirium_step",
             Convert.ToInt32(gauge.DeliriumComboStep));
+    }
+
+    private void RefreshMachinist(TrainingState state)
+    {
+        var gauge = jobGauges.Get<MCHGauge>();
+
+        state.SetGauge("heat", gauge.Heat);
+        state.SetGauge("battery", gauge.Battery);
+        state.SetStateValue("overheated", gauge.IsOverheated ? 1d : 0d);
+        state.SetStateValue(
+            "overheat_ms",
+            Math.Max(0, gauge.OverheatTimeRemaining));
+        state.SetStateValue("robot_active", gauge.IsRobotActive ? 1d : 0d);
+        state.SetStateValue(
+            "summon_ms",
+            Math.Max(0, gauge.SummonTimeRemaining));
+        state.SetGauge("last_summon_battery", gauge.LastSummonBatteryPower);
     }
 }
