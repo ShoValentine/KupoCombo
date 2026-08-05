@@ -5,8 +5,13 @@ using KupoCombo.Models;
 
 namespace KupoCombo.Services;
 
-public sealed class RuleSetTrainingPolicy : ITrainingPolicy
+public sealed class RuleSetTrainingPolicy :
+    ITrainingPolicy,
+    ITrainingForecastPolicy
 {
+    private const float AssumedGcdSeconds = 2.5f;
+    private const float AssumedComboSeconds = 30f;
+
     private readonly PolicyEvaluationContext context;
     private readonly PolicyConditionEvaluator conditionEvaluator;
     private readonly IReadOnlyList<PolicyRuleDefinition> orderedRules;
@@ -44,10 +49,66 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
 
     public TrainingDecision Evaluate(TrainingState state)
     {
+        return EvaluateCore(state).Decision;
+    }
+
+    public IReadOnlyList<TrainingForecastStep> Forecast(
+        TrainingState state,
+        int maximumGcds)
+    {
+        var stepLimit = Math.Clamp(maximumGcds, 1, 8);
+        var simulatedState = state.Clone();
+        var forecast = new List<TrainingForecastStep>(stepLimit);
+        var unappliedWeaveBranch = false;
+
+        for (var offset = 0; offset < stepLimit; offset++)
+        {
+            var evaluation = EvaluateCore(simulatedState);
+
+            if (evaluation.Decision.IsComplete ||
+                evaluation.GcdMatch == null)
+            {
+                break;
+            }
+
+            var confidence = Math.Clamp(
+                1f - (offset * 0.18f) -
+                (unappliedWeaveBranch ? 0.12f : 0f),
+                0.35f,
+                1f);
+
+            forecast.Add(
+                new TrainingForecastStep
+                {
+                    Offset = offset,
+                    GcdActionId = evaluation.Decision.PreferredActionId,
+                    SuggestedActionIds =
+                        evaluation.Decision.SuggestedActionIds,
+                    Reason = evaluation.Decision.Reason,
+                    SuggestionReason =
+                        evaluation.Decision.SuggestionReason,
+                    Confidence = confidence
+                });
+
+            unappliedWeaveBranch |=
+                evaluation.Decision.SuggestedActionIds.Count > 0;
+
+            ApplyForecastTransition(
+                simulatedState,
+                evaluation.GcdMatch);
+        }
+
+        return forecast;
+    }
+
+    private EvaluationResult EvaluateCore(TrainingState state)
+    {
         if (!IsProfileApplicable(state))
         {
-            return TrainingDecision.Complete(
-                $"Policy '{Definition.Name}' does not apply to the current level or target count.");
+            return new EvaluationResult(
+                TrainingDecision.Complete(
+                    $"Policy '{Definition.Name}' does not apply to the current level or target count."),
+                null);
         }
 
         RuleMatch? gcdMatch = null;
@@ -88,19 +149,23 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
 
         if (gcdMatch == null)
         {
-            return TrainingDecision.Complete(
-                "No GCD rule matched the current training state.");
+            return new EvaluationResult(
+                TrainingDecision.Complete(
+                    "No GCD rule matched the current training state."),
+                null);
         }
 
-        return new TrainingDecision
-        {
-            PreferredActionId = gcdMatch.ActionId,
-            AcceptableActionIds = gcdMatch.AcceptableActionIds,
-            SuggestedActionIds = suggestedActions,
-            Reason = gcdMatch.Reason,
-            SuggestionReason = string.Join(" ", suggestionReasons),
-            MistakeResponse = gcdMatch.MistakeResponse
-        };
+        return new EvaluationResult(
+            new TrainingDecision
+            {
+                PreferredActionId = gcdMatch.ActionId,
+                AcceptableActionIds = gcdMatch.AcceptableActionIds,
+                SuggestedActionIds = suggestedActions,
+                Reason = gcdMatch.Reason,
+                SuggestionReason = string.Join(" ", suggestionReasons),
+                MistakeResponse = gcdMatch.MistakeResponse
+            },
+            gcdMatch);
     }
 
     private bool IsProfileApplicable(TrainingState state)
@@ -183,6 +248,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
 
             match = CreateMatch(
                 rule,
+                alias,
                 adjustedActionId,
                 Array.Empty<uint>());
             return true;
@@ -359,6 +425,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
 
         match = CreateMatch(
             rule,
+            actionAlias,
             context.GetActionId(actionAlias, state),
             acceptableActions);
         return true;
@@ -366,6 +433,7 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
 
     private RuleMatch CreateMatch(
         PolicyRuleDefinition rule,
+        string actionAlias,
         uint actionId,
         IReadOnlyList<uint> acceptableActions)
     {
@@ -375,12 +443,127 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
             .ToArray();
 
         return new RuleMatch(
+            rule,
+            actionAlias,
             actionId,
             filteredAcceptableActions,
             !string.IsNullOrWhiteSpace(rule.Reason)
                 ? rule.Reason
                 : $"Rule '{rule.Id}' selected this action.",
             rule.MistakeResponse);
+    }
+
+    private void ApplyForecastTransition(
+        TrainingState state,
+        RuleMatch match)
+    {
+        state.RecordAcceptedAction(match.ActionId);
+        ConsumeForecastCooldown(state, match);
+        ApplyForecastRuleEffect(state, match);
+        UpdateForecastCombo(state, match.ActionId);
+        state.AdvanceForecastTime(AssumedGcdSeconds);
+    }
+
+    private void ConsumeForecastCooldown(
+        TrainingState state,
+        RuleMatch match)
+    {
+        state.ConsumeCooldown(match.ActionId);
+
+        var action = context.GetAction(match.ActionAlias);
+
+        if (string.IsNullOrWhiteSpace(action.AdjustedFrom))
+        {
+            return;
+        }
+
+        state.ConsumeCooldown(
+            context.GetAction(action.AdjustedFrom).ActionId);
+    }
+
+    private void ApplyForecastRuleEffect(
+        TrainingState state,
+        RuleMatch match)
+    {
+        switch (match.Rule.Type)
+        {
+            case PolicyRuleType.FollowProc:
+                state.RemoveStatus(
+                    context.GetStatusId(match.Rule.Status));
+                break;
+
+            case PolicyRuleType.SpendStatusStacks:
+                state.DecrementStatusStacks(
+                    context.GetStatusId(match.Rule.Status));
+                break;
+
+            case PolicyRuleType.FollowAdjustedAction:
+                ResetForecastAdjustedAction(state, match.ActionAlias);
+                break;
+
+            case PolicyRuleType.PreventResourceOvercap:
+                LowerForecastResource(state, match.Rule);
+                break;
+        }
+    }
+
+    private void ResetForecastAdjustedAction(
+        TrainingState state,
+        string actionAlias)
+    {
+        var action = context.GetAction(actionAlias);
+
+        if (string.IsNullOrWhiteSpace(action.AdjustedFrom))
+        {
+            return;
+        }
+
+        var baseAction = context.GetAction(action.AdjustedFrom);
+        state.SetAdjustedAction(baseAction.ActionId, baseAction.ActionId);
+    }
+
+    private void LowerForecastResource(
+        TrainingState state,
+        PolicyRuleDefinition rule)
+    {
+        if (string.IsNullOrWhiteSpace(rule.Resource))
+        {
+            return;
+        }
+
+        var current = context.GetStateValue(rule.Resource, state);
+        var threshold = rule.Threshold ?? current;
+        var incomingGain = Math.Max(1d, rule.IncomingGain ?? 1d);
+        var predicted = Math.Max(
+            0d,
+            Math.Min(current, threshold - incomingGain));
+
+        state.SetStateValue(rule.Resource, predicted);
+    }
+
+    private void UpdateForecastCombo(
+        TrainingState state,
+        uint actionId)
+    {
+        foreach (var combo in Definition.Combos.Values)
+        {
+            foreach (var actionAlias in combo.Steps)
+            {
+                var action = context.GetAction(actionAlias);
+                var resolvedActionId = context.GetActionId(
+                    actionAlias,
+                    state);
+
+                if (actionId != action.ActionId &&
+                    actionId != resolvedActionId)
+                {
+                    continue;
+                }
+
+                state.SetCombo(actionId, AssumedComboSeconds);
+                return;
+            }
+        }
     }
 
     private string FindNextComboAction(TrainingState state)
@@ -462,8 +645,14 @@ public sealed class RuleSetTrainingPolicy : ITrainingPolicy
     }
 
     private sealed record RuleMatch(
+        PolicyRuleDefinition Rule,
+        string ActionAlias,
         uint ActionId,
         IReadOnlyList<uint> AcceptableActionIds,
         string Reason,
         TrainingMistakeResponse MistakeResponse);
+
+    private sealed record EvaluationResult(
+        TrainingDecision Decision,
+        RuleMatch? GcdMatch);
 }
