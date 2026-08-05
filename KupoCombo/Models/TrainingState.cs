@@ -8,6 +8,8 @@ public sealed class CooldownSnapshot
 {
     public float RemainingSeconds { get; init; }
 
+    public float RechargeSeconds { get; init; }
+
     public int Charges { get; init; }
 
     public int MaximumCharges { get; init; }
@@ -226,6 +228,7 @@ public sealed class TrainingState
             clone.cooldowns[item.Key] = new CooldownSnapshot
             {
                 RemainingSeconds = item.Value.RemainingSeconds,
+                RechargeSeconds = item.Value.RechargeSeconds,
                 Charges = item.Value.Charges,
                 MaximumCharges = item.Value.MaximumCharges
             };
@@ -274,6 +277,24 @@ public sealed class TrainingState
         LastObservedActionId = actionId;
     }
 
+    internal void SetStatus(
+        uint statusId,
+        int stacks,
+        float remainingSeconds)
+    {
+        if (statusId == 0)
+        {
+            return;
+        }
+
+        statuses[statusId] = new StatusSnapshot
+        {
+            StatusId = statusId,
+            Param = (ushort)Math.Clamp(stacks, 0, ushort.MaxValue),
+            RemainingSeconds = Math.Max(0f, remainingSeconds)
+        };
+    }
+
     internal void RemoveStatus(uint statusId)
     {
         statuses.Remove(statusId);
@@ -304,20 +325,35 @@ public sealed class TrainingState
 
     internal void ConsumeCooldown(uint actionId)
     {
-        if (!cooldowns.TryGetValue(actionId, out var cooldown))
+        if (!cooldowns.TryGetValue(actionId, out var cooldown) ||
+            cooldown.Charges <= 0)
         {
             return;
         }
 
         var charges = Math.Max(0, cooldown.Charges - 1);
+        var remainingSeconds = cooldown.RemainingSeconds;
+
+        if (cooldown.Charges >= cooldown.MaximumCharges &&
+            charges < cooldown.MaximumCharges)
+        {
+            remainingSeconds = cooldown.RechargeSeconds > 0f
+                ? cooldown.RechargeSeconds
+                : Math.Max(cooldown.RemainingSeconds, 999f);
+        }
+        else if (charges < cooldown.MaximumCharges && remainingSeconds <= 0f)
+        {
+            remainingSeconds = cooldown.RechargeSeconds > 0f
+                ? cooldown.RechargeSeconds
+                : 999f;
+        }
 
         cooldowns[actionId] = new CooldownSnapshot
         {
             Charges = charges,
             MaximumCharges = cooldown.MaximumCharges,
-            RemainingSeconds = charges > 0
-                ? cooldown.RemainingSeconds
-                : Math.Max(cooldown.RemainingSeconds, 999f)
+            RemainingSeconds = remainingSeconds,
+            RechargeSeconds = cooldown.RechargeSeconds
         };
     }
 
@@ -354,27 +390,55 @@ public sealed class TrainingState
 
         foreach (var item in cooldowns.ToArray())
         {
-            if (item.Value.RemainingSeconds <= 0f ||
-                item.Value.RemainingSeconds >= 900f)
+            var cooldown = item.Value;
+
+            if (cooldown.Charges >= cooldown.MaximumCharges)
+            {
+                cooldowns[item.Key] = new CooldownSnapshot
+                {
+                    Charges = cooldown.MaximumCharges,
+                    MaximumCharges = cooldown.MaximumCharges,
+                    RemainingSeconds = 0f,
+                    RechargeSeconds = cooldown.RechargeSeconds
+                };
+                continue;
+            }
+
+            if (cooldown.RemainingSeconds >= 900f &&
+                cooldown.RechargeSeconds <= 0f)
             {
                 continue;
             }
 
-            var remaining = Math.Max(
-                0f,
-                item.Value.RemainingSeconds - elapsed);
-            var charges = item.Value.Charges;
+            var remaining = cooldown.RemainingSeconds - elapsed;
+            var charges = cooldown.Charges;
+            var recharge = cooldown.RechargeSeconds;
 
-            if (remaining <= 0f && charges < item.Value.MaximumCharges)
+            while (remaining <= 0f && charges < cooldown.MaximumCharges)
             {
                 charges++;
+
+                if (charges >= cooldown.MaximumCharges)
+                {
+                    remaining = 0f;
+                    break;
+                }
+
+                if (recharge <= 0f)
+                {
+                    remaining = 0f;
+                    break;
+                }
+
+                remaining += recharge;
             }
 
             cooldowns[item.Key] = new CooldownSnapshot
             {
                 Charges = charges,
-                MaximumCharges = item.Value.MaximumCharges,
-                RemainingSeconds = remaining
+                MaximumCharges = cooldown.MaximumCharges,
+                RemainingSeconds = Math.Max(0f, remaining),
+                RechargeSeconds = recharge
             };
         }
     }
