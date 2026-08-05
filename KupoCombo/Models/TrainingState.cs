@@ -28,6 +28,8 @@ public sealed class StatusSnapshot
 
 public sealed class TrainingState
 {
+    private const int MaximumMpTransactions = 256;
+
     private readonly List<uint> acceptedActionHistory = new();
     private readonly Dictionary<string, int> gauges =
         new(StringComparer.OrdinalIgnoreCase);
@@ -36,6 +38,8 @@ public sealed class TrainingState
     private readonly Dictionary<uint, StatusSnapshot> statuses = new();
     private readonly Dictionary<uint, CooldownSnapshot> cooldowns = new();
     private readonly Dictionary<uint, uint> adjustedActions = new();
+    private readonly Dictionary<uint, float> adjustedRecastSeconds = new();
+    private readonly List<MpTransaction> mpTransactions = new();
 
     public string Job { get; private set; } = string.Empty;
 
@@ -53,6 +57,8 @@ public sealed class TrainingState
 
     public uint LastAcceptedActionId { get; private set; }
 
+    public PlayerTimingProfile TimingProfile { get; private set; } = new();
+
     public int AcceptedActionCount => acceptedActionHistory.Count;
 
     public IReadOnlyList<uint> AcceptedActionHistory => acceptedActionHistory;
@@ -66,6 +72,11 @@ public sealed class TrainingState
     public IReadOnlyDictionary<uint, CooldownSnapshot> Cooldowns => cooldowns;
 
     public IReadOnlyDictionary<uint, uint> AdjustedActions => adjustedActions;
+
+    public IReadOnlyDictionary<uint, float> AdjustedRecastSeconds =>
+        adjustedRecastSeconds;
+
+    public IReadOnlyList<MpTransaction> MpTransactions => mpTransactions;
 
     public void SetLevel(int level)
     {
@@ -116,6 +127,36 @@ public sealed class TrainingState
     public bool TryGetStateValue(string name, out double value)
     {
         return stateValues.TryGetValue(name, out value);
+    }
+
+    public void SetPlayerTiming(
+        int skillSpeed,
+        int spellSpeed,
+        int haste)
+    {
+        TimingProfile.SetAttributes(skillSpeed, spellSpeed, haste);
+    }
+
+    public void SetAdjustedRecastSeconds(
+        uint actionId,
+        float seconds)
+    {
+        if (actionId == 0 || seconds <= 0f)
+        {
+            return;
+        }
+
+        adjustedRecastSeconds[actionId] = seconds;
+        TimingProfile.SetAdjustedRecastSeconds(actionId, seconds);
+    }
+
+    public float GetAdjustedRecastSeconds(
+        uint actionId,
+        float fallback = 0f)
+    {
+        return adjustedRecastSeconds.TryGetValue(actionId, out var seconds)
+            ? seconds
+            : fallback;
     }
 
     public void ReplaceStatuses(IEnumerable<StatusSnapshot> snapshots)
@@ -198,7 +239,8 @@ public sealed class TrainingState
             NativeComboActionId = NativeComboActionId,
             ComboRemainingSeconds = ComboRemainingSeconds,
             LastObservedActionId = LastObservedActionId,
-            LastAcceptedActionId = LastAcceptedActionId
+            LastAcceptedActionId = LastAcceptedActionId,
+            TimingProfile = TimingProfile.Clone()
         };
 
         clone.acceptedActionHistory.AddRange(acceptedActionHistory);
@@ -239,6 +281,12 @@ public sealed class TrainingState
             clone.adjustedActions[item.Key] = item.Value;
         }
 
+        foreach (var item in adjustedRecastSeconds)
+        {
+            clone.adjustedRecastSeconds[item.Key] = item.Value;
+        }
+
+        clone.mpTransactions.AddRange(mpTransactions);
         return clone;
     }
 
@@ -252,12 +300,15 @@ public sealed class TrainingState
         ComboRemainingSeconds = 0f;
         LastObservedActionId = 0;
         LastAcceptedActionId = 0;
+        TimingProfile = new PlayerTimingProfile();
         acceptedActionHistory.Clear();
         gauges.Clear();
         stateValues.Clear();
         statuses.Clear();
         cooldowns.Clear();
         adjustedActions.Clear();
+        adjustedRecastSeconds.Clear();
+        mpTransactions.Clear();
     }
 
     internal void RecordAcceptedAction(uint actionId)
@@ -275,6 +326,18 @@ public sealed class TrainingState
     internal void RecordRejectedAction(uint actionId)
     {
         LastObservedActionId = actionId;
+    }
+
+    internal void RecordMpTransaction(MpTransaction transaction)
+    {
+        mpTransactions.Add(transaction);
+
+        if (mpTransactions.Count > MaximumMpTransactions)
+        {
+            mpTransactions.RemoveRange(
+                0,
+                mpTransactions.Count - MaximumMpTransactions);
+        }
     }
 
     internal void SetStatus(
