@@ -39,6 +39,8 @@ public sealed class TrainingActionResult
 
 public sealed class TrainingSession
 {
+    private const int ForecastGcdCount = 4;
+
     public ITrainingPolicy? Policy { get; private set; }
 
     public SequenceDefinition? Sequence =>
@@ -47,6 +49,12 @@ public sealed class TrainingSession
     public TrainingState Snapshot { get; } = new();
 
     public TrainingDecision? CurrentDecision { get; private set; }
+
+    public IReadOnlyList<TrainingForecastStep> CurrentForecast
+    {
+        get;
+        private set;
+    } = Array.Empty<TrainingForecastStep>();
 
     public TrainingSessionState State { get; private set; } =
         TrainingSessionState.Stopped;
@@ -81,8 +89,8 @@ public sealed class TrainingSession
         Snapshot.Begin(policy.Job, level);
         LastIncorrectActionId = 0;
         LastExpectedActionId = 0;
-        CurrentDecision = policy.Evaluate(Snapshot);
-        State = CurrentDecision.IsComplete
+        RecalculateDecision();
+        State = CurrentDecision?.IsComplete == true
             ? TrainingSessionState.Complete
             : TrainingSessionState.Armed;
     }
@@ -95,9 +103,9 @@ public sealed class TrainingSession
         }
 
         refresh(Snapshot);
-        CurrentDecision = Policy.Evaluate(Snapshot);
+        RecalculateDecision();
 
-        if (CurrentDecision.IsComplete)
+        if (CurrentDecision?.IsComplete == true)
         {
             State = TrainingSessionState.Complete;
         }
@@ -107,6 +115,7 @@ public sealed class TrainingSession
     {
         Policy = null;
         CurrentDecision = null;
+        CurrentForecast = Array.Empty<TrainingForecastStep>();
         Snapshot.Clear();
         LastIncorrectActionId = 0;
         LastExpectedActionId = 0;
@@ -129,7 +138,7 @@ public sealed class TrainingSession
         {
             Snapshot.RecordObservedAction(actionId);
             State = TrainingSessionState.Running;
-            CurrentDecision = Policy.Evaluate(Snapshot);
+            RecalculateDecision();
 
             return new TrainingActionResult
             {
@@ -168,7 +177,7 @@ public sealed class TrainingSession
                 State = TrainingSessionState.Running;
             }
 
-            CurrentDecision = Policy.Evaluate(Snapshot);
+            RecalculateDecision();
 
             return new TrainingActionResult
             {
@@ -184,9 +193,9 @@ public sealed class TrainingSession
 
         Snapshot.RecordAcceptedAction(actionId);
         State = TrainingSessionState.Running;
-        CurrentDecision = Policy.Evaluate(Snapshot);
+        RecalculateDecision();
 
-        if (CurrentDecision.IsComplete)
+        if (CurrentDecision?.IsComplete == true)
         {
             State = TrainingSessionState.Complete;
 
@@ -212,6 +221,29 @@ public sealed class TrainingSession
             WasPreferred = wasPreferred,
             DecisionReason = decision.Reason
         };
+    }
+
+    private void RecalculateDecision()
+    {
+        if (Policy == null)
+        {
+            CurrentDecision = null;
+            CurrentForecast = Array.Empty<TrainingForecastStep>();
+            return;
+        }
+
+        CurrentDecision = Policy.Evaluate(Snapshot);
+
+        if (CurrentDecision.IsComplete ||
+            Policy is not ITrainingForecastPolicy forecastPolicy)
+        {
+            CurrentForecast = Array.Empty<TrainingForecastStep>();
+            return;
+        }
+
+        CurrentForecast = forecastPolicy.Forecast(
+            Snapshot,
+            ForecastGcdCount);
     }
 
     private static bool Contains(
