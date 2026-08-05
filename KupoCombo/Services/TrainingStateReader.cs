@@ -104,27 +104,98 @@ public unsafe sealed class TrainingStateReader
                 actionId,
                 actionManager->GetAdjustedActionId(actionId));
 
+            var expectedMaximumCharges = GetExpectedMaximumCharges(
+                policy,
+                actionId,
+                state.Level);
+            var expectedRechargeSeconds = GetExpectedRechargeSeconds(
+                policy,
+                actionId,
+                state.Level);
+
             state.SetCooldown(
                 actionId,
-                ReadCooldown(actionManager, actionId, state.Level));
+                ReadCooldown(
+                    actionManager,
+                    actionId,
+                    state.Level,
+                    expectedMaximumCharges,
+                    expectedRechargeSeconds));
         }
+    }
+
+    private static int GetExpectedMaximumCharges(
+        ITrainingPolicy policy,
+        uint actionId,
+        int level)
+    {
+        if (policy is not RuleSetTrainingPolicy rulePolicy)
+        {
+            return 1;
+        }
+
+        foreach (var action in rulePolicy.Definition.Actions.Values)
+        {
+            if (action.ActionId == actionId &&
+                level >= action.MinimumLevel &&
+                (!action.MaximumLevel.HasValue ||
+                 level <= action.MaximumLevel.Value))
+            {
+                return Math.Max(1, action.MaximumCharges);
+            }
+        }
+
+        return 1;
+    }
+
+    private static float GetExpectedRechargeSeconds(
+        ITrainingPolicy policy,
+        uint actionId,
+        int level)
+    {
+        if (policy is not RuleSetTrainingPolicy rulePolicy)
+        {
+            return 0f;
+        }
+
+        foreach (var action in rulePolicy.Definition.Actions.Values)
+        {
+            if (action.ActionId == actionId &&
+                level >= action.MinimumLevel &&
+                (!action.MaximumLevel.HasValue ||
+                 level <= action.MaximumLevel.Value))
+            {
+                return (float)Math.Max(0d, action.RecastSeconds);
+            }
+        }
+
+        return 0f;
     }
 
     private static CooldownSnapshot ReadCooldown(
         ActionManager* actionManager,
         uint actionId,
-        int level)
+        int level,
+        int expectedMaximumCharges,
+        float expectedRechargeSeconds)
     {
-        var maximumCharges = Math.Max(
+        var nativeMaximumCharges = Math.Max(
             1,
             (int)ActionManager.GetMaxCharges(
                 actionId,
                 (uint)Math.Max(0, level)));
-        var rechargeSeconds = Math.Max(
+        var maximumCharges = Math.Max(
+            nativeMaximumCharges,
+            Math.Max(1, expectedMaximumCharges));
+
+        var nativeRechargeSeconds = Math.Max(
             0f,
             actionManager->GetRecastTime(
                 ActionType.Action,
                 actionId));
+        var rechargeSeconds = expectedRechargeSeconds > 0f
+            ? expectedRechargeSeconds
+            : nativeRechargeSeconds;
 
         var recastGroup = actionManager->GetRecastGroup(
             (int)ActionType.Action,
@@ -152,31 +223,42 @@ public unsafe sealed class TrainingStateReader
             };
         }
 
+        var currentCharges = Math.Clamp(
+            (int)actionManager->GetCurrentCharges(actionId),
+            0,
+            maximumCharges);
+
+        if (currentCharges >= maximumCharges)
+        {
+            return new CooldownSnapshot
+            {
+                Charges = maximumCharges,
+                MaximumCharges = maximumCharges,
+                RechargeSeconds = rechargeSeconds
+            };
+        }
+
         if (rechargeSeconds <= 0f)
         {
             return new CooldownSnapshot
             {
                 RemainingSeconds = Math.Max(0f, detail->Total - detail->Elapsed),
                 RechargeSeconds = 0f,
-                Charges = 0,
+                Charges = currentCharges,
                 MaximumCharges = maximumCharges
             };
         }
 
-        var charges = Math.Clamp(
-            (int)MathF.Floor(detail->Elapsed / rechargeSeconds),
-            0,
-            maximumCharges);
-
-        var remainingSeconds = charges >= maximumCharges
-            ? 0f
-            : rechargeSeconds - (detail->Elapsed % rechargeSeconds);
+        var elapsedWithinCharge = detail->Elapsed % rechargeSeconds;
+        var remainingSeconds = elapsedWithinCharge <= 0f
+            ? rechargeSeconds
+            : rechargeSeconds - elapsedWithinCharge;
 
         return new CooldownSnapshot
         {
             RemainingSeconds = Math.Max(0f, remainingSeconds),
             RechargeSeconds = rechargeSeconds,
-            Charges = charges,
+            Charges = currentCharges,
             MaximumCharges = maximumCharges
         };
     }
