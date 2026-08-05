@@ -30,6 +30,8 @@ public sealed class PveActionCatalogEntry
 
     public double RecastSeconds { get; set; }
 
+    public double TimelineLockSeconds { get; set; } = 2.5d;
+
     public int MaximumCharges { get; set; } = 1;
 
     public int? Potency { get; set; }
