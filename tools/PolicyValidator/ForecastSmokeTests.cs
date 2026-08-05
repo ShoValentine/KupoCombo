@@ -4,13 +4,17 @@ using KupoCombo.Services;
 
 internal static class ForecastSmokeTests
 {
+    private const uint Unmend = 3624;
     private const uint HardSlash = 3617;
     private const uint SyphonStrike = 3623;
-    private const uint Souleater = 3632;
     private const uint Delirium = 7390;
     private const uint Bloodspiller = 7392;
     private const uint EdgeOfDarkness = 16467;
     private const uint EdgeOfShadow = 16470;
+    private const uint LivingShadow = 16472;
+    private const uint CarveAndSpit = 3639;
+    private const uint Shadowbringer = 25757;
+    private const uint SaltedEarth = 3643;
 
     private const uint SplitShot = 2866;
     private const uint SlugShot = 2868;
@@ -44,7 +48,7 @@ internal static class ForecastSmokeTests
         ValidateMachinistForecast(policyDirectory);
 
         Console.WriteLine(
-            "Forecast smoke tests passed for DRK combo progression and MCH Overheat repetition.");
+            "Forecast smoke tests passed for the DRK opener ribbon and MCH Overheat repetition.");
     }
 
     private static void ValidateDarkKnightForecast(string policyDirectory)
@@ -63,24 +67,29 @@ internal static class ForecastSmokeTests
         state.SetGauge("delirium_step", 0);
         state.SetAdjustedAction(Bloodspiller, Bloodspiller);
         state.SetAdjustedAction(EdgeOfDarkness, EdgeOfShadow);
-        state.SetCooldown(
-            Delirium,
-            new CooldownSnapshot
-            {
-                RemainingSeconds = 30f,
-                Charges = 0,
-                MaximumCharges = 1
-            });
+        state.SetAdjustedAction(LivingShadow, LivingShadow);
+        state.SetAdjustedAction(SaltedEarth, SaltedEarth);
+        state.SetCooldown(Delirium, ReadyCooldown(60f));
+        state.SetCooldown(LivingShadow, ReadyCooldown(120f));
+        state.SetCooldown(CarveAndSpit, ReadyCooldown(60f));
+        state.SetCooldown(Shadowbringer, ReadyCooldown(60f, 2));
+        state.SetCooldown(SaltedEarth, ReadyCooldown(90f));
 
         var forecast = policy.Forecast(state, 3);
+        var ribbon = forecast
+            .SelectMany(step =>
+                step.SuggestedActionIds.Concat(new[] { step.GcdActionId }))
+            .ToArray();
         var expected = new[]
         {
+            Unmend,
+            EdgeOfShadow,
             HardSlash,
-            SyphonStrike,
-            Souleater
+            LivingShadow,
+            SyphonStrike
         };
 
-        AssertForecast("DRK", forecast, expected);
+        AssertRibbon("DRK", ribbon, expected);
     }
 
     private static void ValidateMachinistForecast(string policyDirectory)
@@ -112,10 +121,24 @@ internal static class ForecastSmokeTests
             BlazingShot
         };
 
-        AssertForecast("MCH", forecast, expected);
+        AssertGcdForecast("MCH", forecast, expected);
     }
 
-    private static void AssertForecast(
+    private static void AssertRibbon(
+        string job,
+        IReadOnlyList<uint> ribbon,
+        IReadOnlyList<uint> expected)
+    {
+        if (ribbon.Count < expected.Count ||
+            !ribbon.Take(expected.Count).SequenceEqual(expected))
+        {
+            throw new InvalidDataException(
+                $"{job} ribbon produced [{string.Join(", ", ribbon)}]; " +
+                $"expected prefix [{string.Join(", ", expected)}].");
+        }
+    }
+
+    private static void AssertGcdForecast(
         string job,
         IReadOnlyList<TrainingForecastStep> forecast,
         IReadOnlyList<uint> expected)
@@ -137,5 +160,17 @@ internal static class ForecastSmokeTests
                 $"{job} forecast step {index + 1} produced " +
                 $"{forecast[index].GcdActionId}; expected {expected[index]}.");
         }
+    }
+
+    private static CooldownSnapshot ReadyCooldown(
+        float rechargeSeconds,
+        int maximumCharges = 1)
+    {
+        return new CooldownSnapshot
+        {
+            RechargeSeconds = rechargeSeconds,
+            Charges = maximumCharges,
+            MaximumCharges = maximumCharges
+        };
     }
 }
