@@ -97,13 +97,17 @@ internal sealed class PolicyEvaluationContext
                 $"Policy '{Definition.Id}' does not define combo '{alias}'.");
     }
 
+    public PolicyStateInputDefinition GetStateInput(string alias)
+    {
+        return stateInputs.TryGetValue(alias, out var input)
+            ? input
+            : throw new InvalidOperationException(
+                $"Policy '{Definition.Id}' does not define state input '{alias}'.");
+    }
+
     public double GetStateValue(string alias, TrainingState state)
     {
-        if (!stateInputs.TryGetValue(alias, out var input))
-        {
-            throw new InvalidOperationException(
-                $"Policy '{Definition.Id}' does not define state input '{alias}'.");
-        }
+        var input = GetStateInput(alias);
 
         if (state.TryGetStateValue(alias, out var value))
         {
@@ -115,12 +119,31 @@ internal sealed class PolicyEvaluationContext
             return value;
         }
 
-        var separator = input.Provider.LastIndexOf('.');
-        var providerLeaf = separator >= 0
-            ? input.Provider[(separator + 1)..]
-            : input.Provider;
-
+        var providerLeaf = GetProviderLeaf(input.Provider);
         return state.GetStateValue(providerLeaf);
+    }
+
+    public void SetStateValue(
+        string alias,
+        TrainingState state,
+        double value)
+    {
+        var input = GetStateInput(alias);
+        var clamped = value;
+
+        if (input.Minimum.HasValue)
+        {
+            clamped = Math.Max(input.Minimum.Value, clamped);
+        }
+
+        if (input.Maximum.HasValue)
+        {
+            clamped = Math.Min(input.Maximum.Value, clamped);
+        }
+
+        state.SetStateValue(alias, clamped);
+        state.SetStateValue(input.Provider, clamped);
+        state.SetStateValue(GetProviderLeaf(input.Provider), clamped);
     }
 
     public double? GetStateMaximum(string alias)
@@ -147,6 +170,14 @@ internal sealed class PolicyEvaluationContext
         return value.Number.HasValue
             ? Convert.ToUInt32(value.Number.Value)
             : 0;
+    }
+
+    private static string GetProviderLeaf(string provider)
+    {
+        var separator = provider.LastIndexOf('.');
+        return separator >= 0
+            ? provider[(separator + 1)..]
+            : provider;
     }
 }
 
