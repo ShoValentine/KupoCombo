@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures;
@@ -13,7 +14,7 @@ namespace KupoCombo.Windows;
 public sealed class OverlayWindow : Window, IDisposable
 {
     private const float BaseIconSize = 64f;
-    private const float BaseCellWidth = 120f;
+    private const float BaseCellWidth = 112f;
     private const int MaximumLabelLength = 18;
 
     private readonly Plugin plugin;
@@ -37,12 +38,12 @@ public sealed class OverlayWindow : Window, IDisposable
         ShowCloseButton = false;
         AllowPinning = false;
 
-        Size = new Vector2(650, 240);
+        Size = new Vector2(720, 360);
         SizeCondition = ImGuiCond.FirstUseEver;
 
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(220, 120),
+            MinimumSize = new Vector2(320, 180),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
     }
@@ -103,6 +104,11 @@ public sealed class OverlayWindow : Window, IDisposable
             return;
         }
 
+        DrawDynamicPractice();
+    }
+
+    private void DrawDynamicPractice()
+    {
         var decision = plugin.TrainingSession.CurrentDecision;
 
         if (!plugin.IsDynamicPractice ||
@@ -114,51 +120,76 @@ public sealed class OverlayWindow : Window, IDisposable
         }
 
         ImGui.Text(plugin.SelectedSequenceName);
+        ImGui.Spacing();
 
-        if (!string.IsNullOrWhiteSpace(decision.Reason))
+        var forecast = plugin.TrainingSession.CurrentForecast;
+
+        ImGui.TextDisabled("Likely GCD path");
+
+        if (forecast.Count > 0)
         {
-            ImGui.TextWrapped(decision.Reason);
+            DrawActionGrid(
+                forecast.Select(step => step.GcdActionId).ToArray(),
+                completedCount: 0,
+                itemAlpha: forecast
+                    .Select(step => step.Confidence)
+                    .ToArray());
+        }
+        else
+        {
+            DrawActionGrid(
+                new[] { decision.PreferredActionId },
+                completedCount: 0);
         }
 
-        ImGui.Spacing();
-        ImGui.TextDisabled("Next GCD");
+        if (decision.SuggestedActionIds.Count > 0)
+        {
+            ImGui.Spacing();
+            ImGui.TextDisabled("Weave now");
 
-        DrawActionGrid(
-            new[] { decision.PreferredActionId },
-            completedCount: 0);
+            DrawActionGrid(
+                decision.SuggestedActionIds,
+                completedCount: 0);
+
+            if (!string.IsNullOrWhiteSpace(decision.SuggestionReason))
+            {
+                ImGui.TextWrapped(decision.SuggestionReason);
+            }
+        }
 
         if (decision.AcceptableActionIds.Count > 0)
         {
             ImGui.Spacing();
-            ImGui.TextDisabled("Also acceptable");
+            ImGui.TextDisabled("Also acceptable now");
 
             DrawActionGrid(
                 decision.AcceptableActionIds,
                 completedCount: 0);
         }
 
-        if (decision.SuggestedActionIds.Count == 0)
+        if (!string.IsNullOrWhiteSpace(decision.Reason))
         {
-            return;
+            ImGui.Spacing();
+            ImGui.TextWrapped(decision.Reason);
         }
 
-        ImGui.Spacing();
-        ImGui.TextDisabled("Suggested weave");
-
-        if (!string.IsNullOrWhiteSpace(decision.SuggestionReason))
+        if (forecast.Count > 1)
         {
-            ImGui.TextWrapped(decision.SuggestionReason);
+            ImGui.TextDisabled(
+                "Later GCDs are predictions and recalculate from live state.");
         }
-
-        DrawActionGrid(
-            decision.SuggestedActionIds,
-            completedCount: 0);
     }
 
     private void DrawActionGrid(
         IReadOnlyList<uint> actions,
-        int completedCount)
+        int completedCount,
+        IReadOnlyList<float>? itemAlpha = null)
     {
+        if (actions.Count == 0)
+        {
+            return;
+        }
+
         var globalScale = ImGuiHelpers.GlobalScale;
         var iconScale = Math.Clamp(
             plugin.Configuration.OverlayIconScale,
@@ -208,11 +239,15 @@ public sealed class OverlayWindow : Window, IDisposable
 
             var actionId = actions[step];
             var stepCompleted = step < completedCount;
+            var alpha = itemAlpha != null && step < itemAlpha.Count
+                ? Math.Clamp(itemAlpha[step], 0.2f, 1f)
+                : 1f;
 
             DrawActionCell(
                 actionId,
                 step,
                 stepCompleted,
+                alpha,
                 iconSize,
                 cellWidth);
         }
@@ -233,12 +268,16 @@ public sealed class OverlayWindow : Window, IDisposable
         uint actionId,
         int step,
         bool stepCompleted,
+        float alpha,
         Vector2 iconSize,
         float cellWidth)
     {
-        if (stepCompleted)
+        var effectiveAlpha = alpha * (stepCompleted ? 0.35f : 1f);
+        var alphaPushed = effectiveAlpha < 0.999f;
+
+        if (alphaPushed)
         {
-            ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0.35f);
+            ImGui.PushStyleVar(ImGuiStyleVar.Alpha, effectiveAlpha);
         }
 
         ImGui.BeginGroup();
@@ -269,7 +308,7 @@ public sealed class OverlayWindow : Window, IDisposable
         ImGui.Dummy(new Vector2(cellWidth, 0));
         ImGui.EndGroup();
 
-        if (stepCompleted)
+        if (alphaPushed)
         {
             ImGui.PopStyleVar();
         }
