@@ -13,8 +13,19 @@ internal static class RulePolicyRuntimeLoader
         int targetCount = 1)
     {
         var normalisedJob = job.Trim().ToUpperInvariant();
-        var policyPath = ResolvePolicyPath(normalisedJob);
+        var policyPath = ResolveDataPath(
+            "Policies",
+            $"{normalisedJob}.json");
+        var cataloguePath = ResolveDataPath(
+            "Actions",
+            "pve-actions.json");
         var policies = RulePolicyLoader.Load(policyPath, normalisedJob);
+        var catalogue = PveActionCatalogLoader.Load(cataloguePath);
+
+        foreach (var policy in policies)
+        {
+            PveActionCatalogLoader.Apply(policy, catalogue);
+        }
 
         var effectiveLevel = level > 0
             ? level
@@ -58,7 +69,9 @@ internal static class RulePolicyRuntimeLoader
         }
     }
 
-    private static string ResolvePolicyPath(string job)
+    private static string ResolveDataPath(
+        string directoryName,
+        string fileName)
     {
         var pluginDirectory =
             Plugin.PluginInterface.AssemblyLocation.Directory?.FullName
@@ -72,8 +85,8 @@ internal static class RulePolicyRuntimeLoader
             var developmentPath = Path.Combine(
                 directory.FullName,
                 "Data",
-                "Policies",
-                $"{job}.json");
+                directoryName,
+                fileName);
 
             if (File.Exists(developmentPath))
             {
@@ -85,8 +98,8 @@ internal static class RulePolicyRuntimeLoader
 
         var packagedPath = Path.Combine(
             pluginDirectory,
-            "Policies",
-            $"{job}.json");
+            directoryName,
+            fileName);
 
         if (File.Exists(packagedPath))
         {
@@ -94,7 +107,7 @@ internal static class RulePolicyRuntimeLoader
         }
 
         throw new FileNotFoundException(
-            $"No rule policy file was found for {job}.",
+            $"No {directoryName} data file was found for {fileName}.",
             packagedPath);
     }
 }
