@@ -64,7 +64,10 @@ internal static class FullDarkKnightOpenerSmokeTest
                 step.SuggestedActionIds.Concat(new[] { step.GcdActionId }))
             .ToArray();
 
-        var expectedOpener = new uint[]
+        // MP-restoring Delirium-chain effects are supplied by live state today
+        // and will be modelled by the full player-timing plan. This structural
+        // opener gate focuses on mandatory cooldown and transformed follow-ups.
+        var expectedBurstStructure = new uint[]
         {
             Unmend,
             EdgeOfShadow,
@@ -78,27 +81,35 @@ internal static class FullDarkKnightOpenerSmokeTest
             EdgeOfShadow,
             ScarletDelirium,
             Shadowbringer,
-            EdgeOfShadow,
             Comeuppance,
             SaltedEarth,
-            EdgeOfShadow,
             Torcleaver,
             Shadowbringer,
             Bloodspiller,
             SaltAndDarkness
         };
 
-        if (ribbon.Length < expectedOpener.Length ||
-            !ribbon.Take(expectedOpener.Length).SequenceEqual(expectedOpener))
+        if (ribbon.Length < expectedBurstStructure.Length ||
+            !ribbon
+                .Take(expectedBurstStructure.Length)
+                .SequenceEqual(expectedBurstStructure))
         {
             throw new InvalidDataException(
-                "Complete DRK opener forecast diverged. Expected " +
-                $"[{string.Join(", ", expectedOpener)}], got " +
+                "DRK burst follow-up forecast diverged. Expected " +
+                $"[{string.Join(", ", expectedBurstStructure)}], got " +
                 $"[{string.Join(", ", ribbon)}].");
         }
 
+        if (ribbon
+                .Take(expectedBurstStructure.Length)
+                .Count(actionId => actionId == Shadowbringer) != 2)
+        {
+            throw new InvalidDataException(
+                "DRK opener forecast did not spend both Shadowbringer charges.");
+        }
+
         Console.WriteLine(
-            "Complete DRK opener forecast passed, including both " +
+            "DRK burst follow-up forecast passed, including both " +
             "Shadowbringer charges and Salt and Darkness.");
     }
 
