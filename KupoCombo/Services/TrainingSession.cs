@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using KupoCombo.Models;
 
 namespace KupoCombo.Services;
@@ -39,7 +40,10 @@ public sealed class TrainingActionResult
 
 public sealed class TrainingSession
 {
-    private const int ForecastGcdCount = 4;
+    private const int ForecastGcdCount = 8;
+    private const int CommittedGcdDepth = 2;
+
+    private bool hasReceivedLiveState;
 
     public ITrainingPolicy? Policy { get; private set; }
 
@@ -89,6 +93,7 @@ public sealed class TrainingSession
         Snapshot.Begin(policy.Job, level);
         LastIncorrectActionId = 0;
         LastExpectedActionId = 0;
+        hasReceivedLiveState = false;
         RecalculateDecision();
         State = CurrentDecision?.IsComplete == true
             ? TrainingSessionState.Complete
@@ -103,7 +108,20 @@ public sealed class TrainingSession
         }
 
         refresh(Snapshot);
-        RecalculateDecision();
+
+        if (!hasReceivedLiveState)
+        {
+            hasReceivedLiveState = true;
+            RecalculateDecision();
+        }
+        else if (Policy is ITrainingForecastPolicy)
+        {
+            ReconcileForecastWithoutBreakingCommitment();
+        }
+        else
+        {
+            RecalculateDecision();
+        }
 
         if (CurrentDecision?.IsComplete == true)
         {
@@ -119,6 +137,7 @@ public sealed class TrainingSession
         Snapshot.Clear();
         LastIncorrectActionId = 0;
         LastExpectedActionId = 0;
+        hasReceivedLiveState = false;
         State = TrainingSessionState.Stopped;
     }
 
@@ -138,7 +157,7 @@ public sealed class TrainingSession
         {
             Snapshot.RecordObservedAction(actionId);
             State = TrainingSessionState.Running;
-            RecalculateDecision();
+            ConsumeCommittedSuggestion(actionId);
 
             return new TrainingActionResult
             {
@@ -193,7 +212,18 @@ public sealed class TrainingSession
 
         Snapshot.RecordAcceptedAction(actionId);
         State = TrainingSessionState.Running;
-        RecalculateDecision();
+
+        if (wasPreferred &&
+            Policy is ITrainingForecastPolicy &&
+            CurrentForecast.Count > 0 &&
+            CurrentForecast[0].GcdActionId == actionId)
+        {
+            AdvanceCommittedForecast();
+        }
+        else
+        {
+            RecalculateDecision();
+        }
 
         if (CurrentDecision?.IsComplete == true)
         {
@@ -241,9 +271,157 @@ public sealed class TrainingSession
             return;
         }
 
-        CurrentForecast = forecastPolicy.Forecast(
+        CurrentForecast = Reindex(
+            forecastPolicy.Forecast(
+                Snapshot,
+                ForecastGcdCount));
+    }
+
+    private void ReconcileForecastWithoutBreakingCommitment()
+    {
+        if (Policy == null ||
+            Policy is not ITrainingForecastPolicy forecastPolicy)
+        {
+            RecalculateDecision();
+            return;
+        }
+
+        var freshDecision = Policy.Evaluate(Snapshot);
+        var freshForecast = forecastPolicy.Forecast(
             Snapshot,
             ForecastGcdCount);
+
+        if (CurrentDecision == null ||
+            CurrentForecast.Count == 0)
+        {
+            CurrentDecision = freshDecision;
+            CurrentForecast = Reindex(freshForecast);
+            return;
+        }
+
+        if (freshDecision.IsComplete || freshForecast.Count == 0)
+        {
+            return;
+        }
+
+        var committedDepth = Math.Min(
+            CommittedGcdDepth,
+            Math.Min(CurrentForecast.Count, freshForecast.Count));
+
+        for (var index = 0; index < committedDepth; index++)
+        {
+            if (CurrentForecast[index].GcdActionId !=
+                freshForecast[index].GcdActionId)
+            {
+                return;
+            }
+        }
+
+        var merged = CurrentForecast
+            .Take(committedDepth)
+            .Concat(freshForecast.Skip(committedDepth))
+            .Take(ForecastGcdCount)
+            .ToArray();
+
+        CurrentForecast = Reindex(merged);
+
+        var committedHead = CurrentForecast[0];
+        CurrentDecision = new TrainingDecision
+        {
+            PreferredActionId = committedHead.GcdActionId,
+            AcceptableActionIds = freshDecision.PreferredActionId ==
+                committedHead.GcdActionId
+                ? freshDecision.AcceptableActionIds
+                : CurrentDecision.AcceptableActionIds,
+            SuggestedActionIds = committedHead.SuggestedActionIds,
+            Reason = committedHead.Reason,
+            SuggestionReason = committedHead.SuggestionReason,
+            MistakeResponse = CurrentDecision.MistakeResponse
+        };
+    }
+
+    private void ConsumeCommittedSuggestion(uint actionId)
+    {
+        if (CurrentDecision == null)
+        {
+            return;
+        }
+
+        var remainingSuggestions = CurrentDecision.SuggestedActionIds
+            .Where(candidate => candidate != actionId)
+            .ToArray();
+
+        CurrentDecision = new TrainingDecision
+        {
+            PreferredActionId = CurrentDecision.PreferredActionId,
+            AcceptableActionIds = CurrentDecision.AcceptableActionIds,
+            SuggestedActionIds = remainingSuggestions,
+            Reason = CurrentDecision.Reason,
+            SuggestionReason = CurrentDecision.SuggestionReason,
+            MistakeResponse = CurrentDecision.MistakeResponse
+        };
+
+        if (CurrentForecast.Count == 0)
+        {
+            return;
+        }
+
+        var head = CurrentForecast[0];
+        var replacement = new TrainingForecastStep
+        {
+            Offset = 0,
+            GcdActionId = head.GcdActionId,
+            SuggestedActionIds = head.SuggestedActionIds
+                .Where(candidate => candidate != actionId)
+                .ToArray(),
+            Reason = head.Reason,
+            SuggestionReason = head.SuggestionReason,
+            Confidence = head.Confidence
+        };
+
+        CurrentForecast = Reindex(
+            new[] { replacement }
+                .Concat(CurrentForecast.Skip(1))
+                .ToArray());
+    }
+
+    private void AdvanceCommittedForecast()
+    {
+        CurrentForecast = Reindex(
+            CurrentForecast.Skip(1).ToArray());
+
+        if (CurrentForecast.Count == 0)
+        {
+            RecalculateDecision();
+            return;
+        }
+
+        var head = CurrentForecast[0];
+        CurrentDecision = new TrainingDecision
+        {
+            PreferredActionId = head.GcdActionId,
+            SuggestedActionIds = head.SuggestedActionIds,
+            Reason = head.Reason,
+            SuggestionReason = head.SuggestionReason,
+            MistakeResponse = CurrentDecision?.MistakeResponse
+                ?? TrainingMistakeResponse.KeepProgress
+        };
+    }
+
+    private static IReadOnlyList<TrainingForecastStep> Reindex(
+        IEnumerable<TrainingForecastStep> forecast)
+    {
+        return forecast
+            .Select((step, index) => new TrainingForecastStep
+            {
+                Offset = index,
+                GcdActionId = step.GcdActionId,
+                SuggestedActionIds = step.SuggestedActionIds,
+                Reason = step.Reason,
+                SuggestionReason = step.SuggestionReason,
+                Confidence = step.Confidence
+            })
+            .ToArray();
     }
 
     private static bool Contains(
