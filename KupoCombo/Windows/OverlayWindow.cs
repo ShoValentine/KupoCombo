@@ -15,6 +15,7 @@ public sealed class OverlayWindow : Window, IDisposable
 {
     private const float BaseIconSize = 64f;
     private const float BaseCellWidth = 112f;
+    private const float WeaveIconScale = 0.68f;
     private const int MaximumLabelLength = 18;
 
     private readonly Plugin plugin;
@@ -38,12 +39,12 @@ public sealed class OverlayWindow : Window, IDisposable
         ShowCloseButton = false;
         AllowPinning = false;
 
-        Size = new Vector2(720, 360);
+        Size = new Vector2(860, 300);
         SizeCondition = ImGuiCond.FirstUseEver;
 
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(320, 180),
+            MinimumSize = new Vector2(320, 160),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
         };
     }
@@ -124,37 +125,31 @@ public sealed class OverlayWindow : Window, IDisposable
 
         var forecast = plugin.TrainingSession.CurrentForecast;
 
-        ImGui.TextDisabled("Likely GCD path");
+        ImGui.TextDisabled("Predicted action ribbon");
 
         if (forecast.Count > 0)
         {
-            DrawActionGrid(
-                forecast.Select(step => step.GcdActionId).ToArray(),
-                completedCount: 0,
-                itemAlpha: forecast
-                    .Select(step => step.Confidence)
-                    .ToArray());
+            DrawForecastRibbon(forecast);
         }
         else
         {
+            var fallbackActions = decision.SuggestedActionIds
+                .Concat(new[] { decision.PreferredActionId })
+                .ToArray();
+            var fallbackScales = decision.SuggestedActionIds
+                .Select(_ => WeaveIconScale)
+                .Concat(new[] { 1f })
+                .ToArray();
+            var fallbackWeaves = decision.SuggestedActionIds
+                .Select(_ => true)
+                .Concat(new[] { false })
+                .ToArray();
+
             DrawActionGrid(
-                new[] { decision.PreferredActionId },
-                completedCount: 0);
-        }
-
-        if (decision.SuggestedActionIds.Count > 0)
-        {
-            ImGui.Spacing();
-            ImGui.TextDisabled("Weave now");
-
-            DrawActionGrid(
-                decision.SuggestedActionIds,
-                completedCount: 0);
-
-            if (!string.IsNullOrWhiteSpace(decision.SuggestionReason))
-            {
-                ImGui.TextWrapped(decision.SuggestionReason);
-            }
+                fallbackActions,
+                completedCount: 0,
+                itemScale: fallbackScales,
+                itemIsWeave: fallbackWeaves);
         }
 
         if (decision.AcceptableActionIds.Count > 0)
@@ -173,17 +168,51 @@ public sealed class OverlayWindow : Window, IDisposable
             ImGui.TextWrapped(decision.Reason);
         }
 
-        if (forecast.Count > 1)
+        if (forecast.Count > 0)
         {
             ImGui.TextDisabled(
-                "Later GCDs are predictions and recalculate from live state.");
+                "Smaller outlined icons are weaves. Later actions are predictions and recalculate from live state.");
         }
+    }
+
+    private void DrawForecastRibbon(
+        IReadOnlyList<TrainingForecastStep> forecast)
+    {
+        var actions = new List<uint>();
+        var alpha = new List<float>();
+        var scale = new List<float>();
+        var isWeave = new List<bool>();
+
+        foreach (var step in forecast)
+        {
+            foreach (var weaveActionId in step.SuggestedActionIds)
+            {
+                actions.Add(weaveActionId);
+                alpha.Add(step.Confidence);
+                scale.Add(WeaveIconScale);
+                isWeave.Add(true);
+            }
+
+            actions.Add(step.GcdActionId);
+            alpha.Add(step.Confidence);
+            scale.Add(1f);
+            isWeave.Add(false);
+        }
+
+        DrawActionGrid(
+            actions,
+            completedCount: 0,
+            itemAlpha: alpha,
+            itemScale: scale,
+            itemIsWeave: isWeave);
     }
 
     private void DrawActionGrid(
         IReadOnlyList<uint> actions,
         int completedCount,
-        IReadOnlyList<float>? itemAlpha = null)
+        IReadOnlyList<float>? itemAlpha = null,
+        IReadOnlyList<float>? itemScale = null,
+        IReadOnlyList<bool>? itemIsWeave = null)
     {
         if (actions.Count == 0)
         {
@@ -206,7 +235,7 @@ public sealed class OverlayWindow : Window, IDisposable
 
         var iconSpacing = configuredSpacing * globalScale;
         var iconLength = BaseIconSize * globalScale * iconScale;
-        var iconSize = new Vector2(iconLength, iconLength);
+        var baseIconSize = new Vector2(iconLength, iconLength);
         var iconBasedCellWidth = BaseCellWidth * globalScale * iconScale;
         var textBasedCellWidth = BaseCellWidth * globalScale * textScale;
         var cellWidth = Math.Max(iconBasedCellWidth, textBasedCellWidth);
@@ -219,7 +248,7 @@ public sealed class OverlayWindow : Window, IDisposable
 
         var labelHeight = ImGui.GetTextLineHeight();
         var cellHeight =
-            iconSize.Y +
+            baseIconSize.Y +
             ImGui.GetStyle().ItemSpacing.Y +
             labelHeight;
         var verticalSpacing = Math.Max(0f, iconSpacing);
@@ -242,14 +271,21 @@ public sealed class OverlayWindow : Window, IDisposable
             var alpha = itemAlpha != null && step < itemAlpha.Count
                 ? Math.Clamp(itemAlpha[step], 0.2f, 1f)
                 : 1f;
+            var scale = itemScale != null && step < itemScale.Count
+                ? Math.Clamp(itemScale[step], 0.45f, 1f)
+                : 1f;
+            var isWeave = itemIsWeave != null &&
+                step < itemIsWeave.Count &&
+                itemIsWeave[step];
 
             DrawActionCell(
                 actionId,
                 step,
                 stepCompleted,
                 alpha,
-                iconSize,
-                cellWidth);
+                baseIconSize * scale,
+                cellWidth,
+                isWeave);
         }
 
         var rowCount = Math.Max(
@@ -270,7 +306,8 @@ public sealed class OverlayWindow : Window, IDisposable
         bool stepCompleted,
         float alpha,
         Vector2 iconSize,
-        float cellWidth)
+        float cellWidth,
+        bool isWeave)
     {
         var effectiveAlpha = alpha * (stepCompleted ? 0.35f : 1f);
         var alphaPushed = effectiveAlpha < 0.999f;
@@ -292,7 +329,8 @@ public sealed class OverlayWindow : Window, IDisposable
                 step,
                 iconSize,
                 cellStartX,
-                cellWidth);
+                cellWidth,
+                isWeave);
         }
         else
         {
@@ -301,7 +339,8 @@ public sealed class OverlayWindow : Window, IDisposable
                 step,
                 iconSize,
                 cellStartX,
-                cellWidth);
+                cellWidth,
+                isWeave);
         }
 
         ImGui.SetCursorPosX(cellStartX);
@@ -320,7 +359,8 @@ public sealed class OverlayWindow : Window, IDisposable
         int step,
         Vector2 iconSize,
         float cellStartX,
-        float cellWidth)
+        float cellWidth,
+        bool isWeave)
     {
         var actionName = action.Name.ToString();
         var icon = Plugin.TextureProvider
@@ -330,22 +370,41 @@ public sealed class OverlayWindow : Window, IDisposable
         CentreNextItem(cellStartX, cellWidth, iconSize.X);
         ImGui.Image(icon.Handle, iconSize);
 
+        if (isWeave)
+        {
+            var drawList = ImGui.GetWindowDrawList();
+            drawList.AddRect(
+                ImGui.GetItemRectMin(),
+                ImGui.GetItemRectMax(),
+                ImGui.GetColorU32(ImGuiCol.CheckMark),
+                4f,
+                ImDrawFlags.None,
+                2f);
+        }
+
         if (ImGui.IsItemHovered())
         {
             DrawActionTooltip(
                 actionName,
                 actionId,
                 step,
-                plugin.GetStepGuidance(step));
+                isWeave,
+                plugin.SelectedSequence != null
+                    ? plugin.GetStepGuidance(step)
+                    : null);
         }
 
-        DrawCentredLabel(actionName, cellStartX, cellWidth);
+        DrawCentredLabel(
+            isWeave ? $"↳ {actionName}" : actionName,
+            cellStartX,
+            cellWidth);
     }
 
     private static void DrawActionTooltip(
         string actionName,
         uint actionId,
         int step,
+        bool isWeave,
         StepGuidance? guidance)
     {
         ImGui.BeginTooltip();
@@ -353,7 +412,7 @@ public sealed class OverlayWindow : Window, IDisposable
 
         ImGui.TextUnformatted(actionName);
         ImGui.TextDisabled(
-            $"Position {step + 1} | Action ID {actionId}");
+            $"{(isWeave ? "Weave" : "GCD")} | Position {step + 1} | Action ID {actionId}");
 
         if (guidance != null)
         {
@@ -388,7 +447,8 @@ public sealed class OverlayWindow : Window, IDisposable
         int step,
         Vector2 iconSize,
         float cellStartX,
-        float cellWidth)
+        float cellWidth,
+        bool isWeave)
     {
         CentreNextItem(cellStartX, cellWidth, iconSize.X);
 
@@ -397,10 +457,13 @@ public sealed class OverlayWindow : Window, IDisposable
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip(
-                $"Unknown action\nPosition: {step + 1}\nAction ID: {actionId}");
+                $"Unknown action\n{(isWeave ? "Weave" : "GCD")}\nPosition: {step + 1}\nAction ID: {actionId}");
         }
 
-        DrawCentredLabel("Unknown", cellStartX, cellWidth);
+        DrawCentredLabel(
+            isWeave ? "↳ Unknown" : "Unknown",
+            cellStartX,
+            cellWidth);
     }
 
     private static void DrawCentredLabel(
