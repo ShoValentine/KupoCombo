@@ -44,18 +44,23 @@ internal static class ForecastSmokeTests
             return;
         }
 
-        ValidateDarkKnightForecast(policyDirectory);
-        ValidateMachinistForecast(policyDirectory);
+        var catalogue = LoadCatalogue(policyDirectory);
+        ValidateDarkKnightForecast(policyDirectory, catalogue);
+        ValidateMachinistForecast(policyDirectory, catalogue);
 
         Console.WriteLine(
-            "Forecast smoke tests passed for the DRK opener ribbon and MCH Overheat repetition.");
+            "Forecast smoke tests passed for the catalogue-backed DRK opener ribbon and MCH Overheat repetition.");
     }
 
-    private static void ValidateDarkKnightForecast(string policyDirectory)
+    private static void ValidateDarkKnightForecast(
+        string policyDirectory,
+        PveActionCatalogFile catalogue)
     {
         var definition = RulePolicyLoader
             .Load(Path.Combine(policyDirectory, "DRK.json"), "DRK")
             .Single();
+        PveActionCatalogLoader.Apply(definition, catalogue);
+
         var policy = new RuleSetTrainingPolicy(definition);
         var state = new TrainingState();
 
@@ -92,11 +97,15 @@ internal static class ForecastSmokeTests
         AssertRibbon("DRK", ribbon, expected);
     }
 
-    private static void ValidateMachinistForecast(string policyDirectory)
+    private static void ValidateMachinistForecast(
+        string policyDirectory,
+        PveActionCatalogFile catalogue)
     {
         var definition = RulePolicyLoader
             .Load(Path.Combine(policyDirectory, "MCH.json"), "MCH")
             .Single();
+        PveActionCatalogLoader.Apply(definition, catalogue);
+
         var policy = new RuleSetTrainingPolicy(definition);
         var state = new TrainingState();
 
@@ -122,6 +131,19 @@ internal static class ForecastSmokeTests
         };
 
         AssertGcdForecast("MCH", forecast, expected);
+    }
+
+    private static PveActionCatalogFile LoadCatalogue(string policyDirectory)
+    {
+        var dataDirectory = Directory.GetParent(policyDirectory)
+            ?? throw new InvalidDataException(
+                "Could not resolve the Data directory for action-catalogue validation.");
+
+        return PveActionCatalogLoader.Load(
+            Path.Combine(
+                dataDirectory.FullName,
+                "Actions",
+                "pve-actions.json"));
     }
 
     private static void AssertRibbon(
