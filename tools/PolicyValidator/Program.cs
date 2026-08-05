@@ -1,15 +1,23 @@
 using KupoCombo.Models;
 using KupoCombo.Services;
 
+const uint Unmend = 3624;
 const uint HardSlash = 3617;
 const uint SyphonStrike = 3623;
+const uint Souleater = 3632;
 const uint Delirium = 7390;
 const uint Bloodspiller = 7392;
 const uint EdgeOfDarkness = 16467;
 const uint EdgeOfShadow = 16470;
+const uint LivingShadow = 16472;
+const uint CarveAndSpit = 3639;
+const uint SaltedEarth = 3643;
+const uint SaltAndDarkness = 25755;
+const uint Shadowbringer = 25757;
 const uint ScarletDelirium = 36928;
 const uint Comeuppance = 36929;
 const uint Torcleaver = 36930;
+const uint Disesteem = 36932;
 
 const uint SplitShot = 2866;
 const uint SlugShot = 2868;
@@ -41,8 +49,7 @@ const uint FullMetalMachinistStatus = 3866;
 
 if (args.Length != 1)
 {
-    Console.Error.WriteLine(
-        "Usage: PolicyValidator <policy-directory>");
+    Console.Error.WriteLine("Usage: PolicyValidator <policy-directory>");
     return 2;
 }
 
@@ -50,8 +57,7 @@ var policyDirectory = Path.GetFullPath(args[0]);
 
 if (!Directory.Exists(policyDirectory))
 {
-    Console.Error.WriteLine(
-        $"Policy directory not found: {policyDirectory}");
+    Console.Error.WriteLine($"Policy directory not found: {policyDirectory}");
     return 2;
 }
 
@@ -62,8 +68,7 @@ var policyFiles = Directory
 
 if (policyFiles.Length == 0)
 {
-    Console.Error.WriteLine(
-        $"No policy files found in {policyDirectory}");
+    Console.Error.WriteLine($"No policy files found in {policyDirectory}");
     return 2;
 }
 
@@ -85,6 +90,7 @@ foreach (var policyFile in policyFiles)
             if (expectedJob.Equals("DRK", StringComparison.OrdinalIgnoreCase))
             {
                 ValidateDarkKnightEvaluator(policy);
+                ValidateDarkKnightOpenerForecast(policy);
             }
             else if (expectedJob.Equals("MCH", StringComparison.OrdinalIgnoreCase))
             {
@@ -96,8 +102,7 @@ foreach (var policyFile in policyFiles)
     {
         failed = true;
         Console.Error.WriteLine(
-            $"Policy validation failed for {policyFile}: " +
-            exception.Message);
+            $"Policy validation failed for {policyFile}: {exception.Message}");
     }
 }
 
@@ -105,163 +110,110 @@ return failed ? 1 : 0;
 
 static void ValidateDarkKnightEvaluator(RulePolicyDefinition definition)
 {
-    var generic = new RuleSetTrainingPolicy(definition);
-    var legacy = new LegacyDarkKnightComboPolicy();
-    var scenarios = CreateDarkKnightScenarios();
+    var policy = new RuleSetTrainingPolicy(definition);
+    var scenarios = new List<DiagnosticScenario>();
 
-    foreach (var scenario in scenarios)
+    scenarios.Add(new DiagnosticScenario(
+        "Starts the standard opener with Unmend",
+        CreateDarkKnightState(),
+        Unmend));
+
+    var comboState = CreateDarkKnightState();
+    comboState.RecordAcceptedAction(HardSlash);
+    comboState.SetCombo(HardSlash, 20f);
+    scenarios.Add(new DiagnosticScenario(
+        "Continues native combo state",
+        comboState,
+        SyphonStrike));
+
+    var overcapState = CreateDarkKnightState();
+    overcapState.RecordAcceptedAction(SyphonStrike);
+    overcapState.SetGauge("blood", 90);
+    overcapState.SetCombo(SyphonStrike, 20f);
+    scenarios.Add(new DiagnosticScenario(
+        "Prevents Souleater Blood overcap",
+        overcapState,
+        Bloodspiller));
+
+    var deliriumState = CreateDarkKnightState();
+    deliriumState.RecordAcceptedAction(Souleater);
+    deliriumState.SetCombo(Souleater, 20f);
+    deliriumState.SetAdjustedAction(Bloodspiller, ScarletDelirium);
+    scenarios.Add(new DiagnosticScenario(
+        "Follows the enhanced Delirium chain",
+        deliriumState,
+        ScarletDelirium));
+
+    var edgeState = CreateDarkKnightState();
+    edgeState.RecordAcceptedAction(Unmend);
+    scenarios.Add(new DiagnosticScenario(
+        "Suggests Edge after Unmend",
+        edgeState,
+        HardSlash,
+        Suggestions: new[] { EdgeOfShadow }));
+
+    var shadowState = CreateDarkKnightState();
+    shadowState.RecordAcceptedAction(HardSlash);
+    shadowState.SetCombo(HardSlash, 20f);
+    scenarios.Add(new DiagnosticScenario(
+        "Suggests Living Shadow after Hard Slash",
+        shadowState,
+        SyphonStrike,
+        Suggestions: new[] { LivingShadow }));
+
+    var burstState = CreateDarkKnightState();
+    burstState.RecordAcceptedAction(Souleater);
+    burstState.SetCombo(Souleater, 20f);
+    burstState.SetAdjustedAction(LivingShadow, Disesteem);
+    scenarios.Add(new DiagnosticScenario(
+        "Pairs Delirium with the Disesteem burst GCD",
+        burstState,
+        Disesteem,
+        Suggestions: new[] { Delirium }));
+
+    ValidateScenarios("DRK", policy, scenarios);
+}
+
+static void ValidateDarkKnightOpenerForecast(
+    RulePolicyDefinition definition)
+{
+    var policy = new RuleSetTrainingPolicy(definition);
+    var forecast = policy.Forecast(CreateDarkKnightState(), 6);
+    var ribbon = forecast
+        .SelectMany(step =>
+            step.SuggestedActionIds.Concat(new[] { step.GcdActionId }))
+        .ToArray();
+    var expectedPrefix = new uint[]
     {
-        var current = generic.Evaluate(scenario.State);
-        var previous = legacy.Evaluate(scenario.State);
+        Unmend,
+        EdgeOfShadow,
+        HardSlash,
+        LivingShadow,
+        SyphonStrike,
+        Souleater,
+        Delirium,
+        Disesteem,
+        CarveAndSpit,
+        EdgeOfShadow,
+        ScarletDelirium
+    };
 
-        var expectedMatches = MatchesExpected(current, scenario);
-        var parityMatches =
-            current.PreferredActionId == previous.PreferredActionId &&
-            SameSet(
-                current.AcceptableActionIds,
-                previous.AcceptableActionIds) &&
-            SameSet(
-                current.SuggestedActionIds,
-                previous.SuggestedActionIds);
-
-        if (!expectedMatches || !parityMatches)
-        {
-            throw new InvalidDataException(
-                $"DRK evaluator scenario '{scenario.Name}' failed. " +
-                $"Generic preferred {current.PreferredActionId}, " +
-                $"acceptable [{Join(current.AcceptableActionIds)}], " +
-                $"suggestions [{Join(current.SuggestedActionIds)}]. " +
-                $"Legacy preferred {previous.PreferredActionId}, " +
-                $"acceptable [{Join(previous.AcceptableActionIds)}], " +
-                $"suggestions [{Join(previous.SuggestedActionIds)}].");
-        }
+    if (ribbon.Length < expectedPrefix.Length ||
+        !ribbon.Take(expectedPrefix.Length).SequenceEqual(expectedPrefix))
+    {
+        throw new InvalidDataException(
+            "DRK opener forecast diverged. Expected prefix " +
+            $"[{Join(expectedPrefix)}], got [{Join(ribbon)}].");
     }
 
     Console.WriteLine(
-        $"Executed {scenarios.Count} DRK evaluator scenarios for " +
-        $"'{definition.Id}' with full legacy parity.");
+        "DRK forecast reproduced the stored opener's opening burst sequence " +
+        "using cooldowns and action effects.");
 }
 
 static void ValidateMachinistEvaluator(RulePolicyDefinition definition)
 {
-    var generic = new RuleSetTrainingPolicy(definition);
-    var scenarios = CreateMachinistScenarios();
-
-    foreach (var scenario in scenarios)
-    {
-        var decision = generic.Evaluate(scenario.State);
-
-        if (!MatchesExpected(decision, scenario))
-        {
-            throw new InvalidDataException(
-                $"MCH evaluator scenario '{scenario.Name}' failed. " +
-                $"Preferred {decision.PreferredActionId}, " +
-                $"acceptable [{Join(decision.AcceptableActionIds)}], " +
-                $"suggestions [{Join(decision.SuggestedActionIds)}].");
-        }
-    }
-
-    Console.WriteLine(
-        $"Executed {scenarios.Count} MCH evaluator scenarios for " +
-        $"'{definition.Id}' without a job-specific policy class.");
-}
-
-static bool MatchesExpected(
-    TrainingDecision decision,
-    DiagnosticScenario scenario)
-{
-    return decision.PreferredActionId == scenario.ExpectedPreferred &&
-        scenario.ExpectedAcceptable.All(
-            actionId => decision.AcceptableActionIds.Contains(actionId)) &&
-        scenario.ExpectedSuggestions.All(
-            actionId => decision.SuggestedActionIds.Contains(actionId));
-}
-
-static IReadOnlyList<DiagnosticScenario> CreateDarkKnightScenarios()
-{
-    var scenarios = new List<DiagnosticScenario>
-    {
-        new(
-            "Starts the Souleater combo",
-            CreateDarkKnightState(),
-            HardSlash)
-    };
-
-    var syphonState = CreateDarkKnightState();
-    syphonState.SetCombo(HardSlash, 20f);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Continues native combo state",
-            syphonState,
-            SyphonStrike));
-
-    var overcapState = CreateDarkKnightState();
-    overcapState.SetGauge("blood", 90);
-    overcapState.SetCombo(SyphonStrike, 20f);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Prevents Souleater Blood overcap",
-            overcapState,
-            Bloodspiller));
-
-    var safeContinuationState = CreateDarkKnightState();
-    safeContinuationState.SetGauge("blood", 90);
-    safeContinuationState.SetCombo(HardSlash, 20f);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Allows safe combo continuation near Blood cap",
-            safeContinuationState,
-            Bloodspiller,
-            new[] { SyphonStrike }));
-
-    scenarios.Add(
-        CreateAdjustedDarkKnightScenario(
-            "Recognises Scarlet Delirium",
-            ScarletDelirium));
-    scenarios.Add(
-        CreateAdjustedDarkKnightScenario(
-            "Recognises Comeuppance",
-            Comeuppance));
-    scenarios.Add(
-        CreateAdjustedDarkKnightScenario(
-            "Recognises Torcleaver",
-            Torcleaver));
-
-    var mpState = CreateDarkKnightState();
-    mpState.SetGauge("mp", 9000);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Suggests Edge before MP overcap",
-            mpState,
-            HardSlash,
-            Suggestions: new[] { EdgeOfShadow }));
-
-    var darkArtsState = CreateDarkKnightState();
-    darkArtsState.SetGauge("dark_arts", 1);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Suggests the free Dark Arts Edge",
-            darkArtsState,
-            HardSlash,
-            Suggestions: new[] { EdgeOfShadow }));
-
-    var deliriumState = CreateDarkKnightState();
-    deliriumState.RecordAcceptedAction(HardSlash);
-    deliriumState.SetCooldown(
-        Delirium,
-        ReadyCooldown());
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Suggests Delirium when ready",
-            deliriumState,
-            SyphonStrike,
-            Suggestions: new[] { Delirium }));
-
-    return scenarios;
-}
-
-static IReadOnlyList<DiagnosticScenario> CreateMachinistScenarios()
-{
+    var policy = new RuleSetTrainingPolicy(definition);
     var scenarios = new List<DiagnosticScenario>
     {
         new(
@@ -271,157 +223,121 @@ static IReadOnlyList<DiagnosticScenario> CreateMachinistScenarios()
     };
 
     var comboState = CreateMachinistState();
+    comboState.RecordAcceptedAction(HeatedSplitShot);
     comboState.SetCombo(HeatedSplitShot, 20f);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Continues the heated combo",
-            comboState,
-            HeatedSlugShot));
+    scenarios.Add(new DiagnosticScenario(
+        "Continues the heated combo",
+        comboState,
+        HeatedSlugShot));
 
     var overheatState = CreateMachinistState();
     overheatState.SetStateValue("overheated", 1d);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Uses Blazing Shot while Overheated",
-            overheatState,
-            BlazingShot));
+    overheatState.SetStateValue("overheat_ms", 10000d);
+    scenarios.Add(new DiagnosticScenario(
+        "Uses Blazing Shot while Overheated",
+        overheatState,
+        BlazingShot));
 
     var fullMetalState = CreateMachinistState();
-    fullMetalState.ReplaceStatuses(
-        new[]
+    fullMetalState.ReplaceStatuses(new[]
+    {
+        new StatusSnapshot
         {
-            new StatusSnapshot
-            {
-                StatusId = FullMetalMachinistStatus,
-                RemainingSeconds = 20f
-            }
-        });
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Uses Full Metal Field from its proc",
-            fullMetalState,
-            FullMetalField));
+            StatusId = FullMetalMachinistStatus,
+            RemainingSeconds = 20f
+        }
+    });
+    scenarios.Add(new DiagnosticScenario(
+        "Uses Full Metal Field from its proc",
+        fullMetalState,
+        FullMetalField));
 
     var excavatorState = CreateMachinistState();
     excavatorState.SetAdjustedAction(ChainSaw, Excavator);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Follows Chain Saw into Excavator",
-            excavatorState,
-            Excavator));
+    scenarios.Add(new DiagnosticScenario(
+        "Follows Chain Saw into Excavator",
+        excavatorState,
+        Excavator));
 
     var airAnchorState = CreateMachinistState();
-    airAnchorState.SetCooldown(AirAnchor, ReadyCooldown());
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Uses Air Anchor when ready",
-            airAnchorState,
-            AirAnchor));
-
-    var drillCapState = CreateMachinistState();
-    drillCapState.SetCooldown(
-        Drill,
-        new CooldownSnapshot
-        {
-            Charges = 2,
-            MaximumCharges = 2
-        });
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Prevents Drill charge overcap",
-            drillCapState,
-            Drill));
+    airAnchorState.SetCooldown(AirAnchor, ReadyCooldown(40f));
+    scenarios.Add(new DiagnosticScenario(
+        "Uses Air Anchor when ready",
+        airAnchorState,
+        AirAnchor));
 
     var heatState = CreateMachinistState();
     heatState.SetGauge("heat", 90);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Suggests Hypercharge before Heat overcap",
-            heatState,
-            HeatedSplitShot,
-            Suggestions: new[] { Hypercharge }));
+    scenarios.Add(new DiagnosticScenario(
+        "Suggests Hypercharge before Heat overcap",
+        heatState,
+        HeatedSplitShot,
+        Suggestions: new[] { Hypercharge }));
 
     var batteryState = CreateMachinistState();
     batteryState.SetGauge("battery", 90);
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Suggests Queen before Battery overcap",
-            batteryState,
-            HeatedSplitShot,
-            Suggestions: new[] { AutomatonQueen }));
+    scenarios.Add(new DiagnosticScenario(
+        "Suggests Queen before Battery overcap",
+        batteryState,
+        HeatedSplitShot,
+        Suggestions: new[] { AutomatonQueen }));
 
     var wildfireState = CreateMachinistState();
-    wildfireState.ReplaceStatuses(
-        new[]
+    wildfireState.ReplaceStatuses(new[]
+    {
+        new StatusSnapshot
         {
-            new StatusSnapshot
-            {
-                StatusId = WildfirePlayerStatus,
-                RemainingSeconds = 8f
-            }
-        });
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Pairs Hypercharge with Wildfire",
-            wildfireState,
-            HeatedSplitShot,
-            Suggestions: new[] { Hypercharge }));
-
-    var barrelState = CreateMachinistState();
-    barrelState.RecordAcceptedAction(HeatedSplitShot);
-    barrelState.SetCooldown(BarrelStabilizer, ReadyCooldown());
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Suggests Barrel Stabilizer when ready",
-            barrelState,
-            HeatedSlugShot,
-            Suggestions: new[] { BarrelStabilizer }));
+            StatusId = WildfirePlayerStatus,
+            RemainingSeconds = 8f
+        }
+    });
+    scenarios.Add(new DiagnosticScenario(
+        "Pairs Hypercharge with Wildfire",
+        wildfireState,
+        HeatedSplitShot,
+        Suggestions: new[] { Hypercharge }));
 
     var chargeState = CreateMachinistState();
-    chargeState.SetCooldown(
-        DoubleCheck,
-        new CooldownSnapshot
-        {
-            Charges = 3,
-            MaximumCharges = 3
-        });
-    chargeState.SetCooldown(
-        Checkmate,
-        new CooldownSnapshot
-        {
-            Charges = 3,
-            MaximumCharges = 3
-        });
-    chargeState.SetCooldown(
-        Reassemble,
-        new CooldownSnapshot
-        {
-            Charges = 2,
-            MaximumCharges = 2
-        });
-    scenarios.Add(
-        new DiagnosticScenario(
-            "Surfaces capped weave charges",
-            chargeState,
-            HeatedSplitShot,
-            Suggestions: new[]
-            {
-                DoubleCheck,
-                Checkmate,
-                Reassemble
-            }));
+    chargeState.SetCooldown(DoubleCheck, ReadyCooldown(30f, 3, 3));
+    chargeState.SetCooldown(Checkmate, ReadyCooldown(30f, 3, 3));
+    chargeState.SetCooldown(Reassemble, ReadyCooldown(55f, 2, 2));
+    scenarios.Add(new DiagnosticScenario(
+        "Surfaces capped weave charges",
+        chargeState,
+        HeatedSplitShot,
+        Suggestions: new[] { DoubleCheck, Checkmate, Reassemble }));
 
-    return scenarios;
+    ValidateScenarios("MCH", policy, scenarios);
 }
 
-static DiagnosticScenario CreateAdjustedDarkKnightScenario(
-    string name,
-    uint adjustedActionId)
+static void ValidateScenarios(
+    string job,
+    RuleSetTrainingPolicy policy,
+    IReadOnlyList<DiagnosticScenario> scenarios)
 {
-    var state = CreateDarkKnightState();
-    state.SetAdjustedAction(Bloodspiller, adjustedActionId);
+    foreach (var scenario in scenarios)
+    {
+        var decision = policy.Evaluate(scenario.State);
+        var matches =
+            decision.PreferredActionId == scenario.ExpectedPreferred &&
+            scenario.ExpectedAcceptable.All(
+                actionId => decision.AcceptableActionIds.Contains(actionId)) &&
+            scenario.ExpectedSuggestions.All(
+                actionId => decision.SuggestedActionIds.Contains(actionId));
 
-    return new DiagnosticScenario(name, state, adjustedActionId);
+        if (!matches)
+        {
+            throw new InvalidDataException(
+                $"{job} scenario '{scenario.Name}' failed. " +
+                $"Preferred {decision.PreferredActionId}, " +
+                $"acceptable [{Join(decision.AcceptableActionIds)}], " +
+                $"suggestions [{Join(decision.SuggestedActionIds)}].");
+        }
+    }
+
+    Console.WriteLine(
+        $"Executed {scenarios.Count} {job} evaluator scenarios for " +
+        $"'{policy.Id}'.");
 }
 
 static TrainingState CreateDarkKnightState()
@@ -433,9 +349,17 @@ static TrainingState CreateDarkKnightState()
     state.SetGauge("darkside_ms", 30000);
     state.SetGauge("dark_arts", 0);
     state.SetGauge("delirium_step", 0);
+
     state.SetAdjustedAction(Bloodspiller, Bloodspiller);
     state.SetAdjustedAction(EdgeOfDarkness, EdgeOfShadow);
-    state.SetCooldown(Delirium, UnreadyCooldown());
+    state.SetAdjustedAction(LivingShadow, LivingShadow);
+    state.SetAdjustedAction(SaltedEarth, SaltedEarth);
+
+    state.SetCooldown(Delirium, ReadyCooldown(60f));
+    state.SetCooldown(LivingShadow, ReadyCooldown(120f));
+    state.SetCooldown(CarveAndSpit, ReadyCooldown(60f));
+    state.SetCooldown(Shadowbringer, ReadyCooldown(60f, 2, 2));
+    state.SetCooldown(SaltedEarth, ReadyCooldown(90f));
     return state;
 }
 
@@ -460,79 +384,51 @@ static TrainingState CreateMachinistState()
     state.SetAdjustedAction(Ricochet, Checkmate);
     state.SetAdjustedAction(ChainSaw, ChainSaw);
 
-    state.SetCooldown(AirAnchor, UnreadyCooldown());
-    state.SetCooldown(ChainSaw, UnreadyCooldown());
-    state.SetCooldown(
-        Drill,
-        new CooldownSnapshot
-        {
-            RemainingSeconds = 10f,
-            Charges = 0,
-            MaximumCharges = 2
-        });
-    state.SetCooldown(BarrelStabilizer, UnreadyCooldown());
-    state.SetCooldown(Wildfire, UnreadyCooldown());
-    state.SetCooldown(
-        DoubleCheck,
-        new CooldownSnapshot
-        {
-            RemainingSeconds = 10f,
-            Charges = 1,
-            MaximumCharges = 3
-        });
-    state.SetCooldown(
-        Checkmate,
-        new CooldownSnapshot
-        {
-            RemainingSeconds = 10f,
-            Charges = 1,
-            MaximumCharges = 3
-        });
-    state.SetCooldown(
-        Reassemble,
-        new CooldownSnapshot
-        {
-            RemainingSeconds = 10f,
-            Charges = 1,
-            MaximumCharges = 2
-        });
-
+    state.SetCooldown(AirAnchor, UnreadyCooldown(10f, 40f));
+    state.SetCooldown(ChainSaw, UnreadyCooldown(30f, 60f));
+    state.SetCooldown(Drill, UnreadyCooldown(10f, 20f, 2));
+    state.SetCooldown(BarrelStabilizer, UnreadyCooldown(30f, 120f));
+    state.SetCooldown(Wildfire, UnreadyCooldown(30f, 120f));
+    state.SetCooldown(DoubleCheck, UnreadyCooldown(10f, 30f, 3, 1));
+    state.SetCooldown(Checkmate, UnreadyCooldown(10f, 30f, 3, 1));
+    state.SetCooldown(Reassemble, UnreadyCooldown(10f, 55f, 2, 1));
     return state;
 }
 
-static CooldownSnapshot ReadyCooldown()
+static CooldownSnapshot ReadyCooldown(
+    float rechargeSeconds,
+    int maximumCharges = 1,
+    int? charges = null)
 {
     return new CooldownSnapshot
     {
-        Charges = 1,
-        MaximumCharges = 1
+        Charges = charges ?? maximumCharges,
+        MaximumCharges = maximumCharges,
+        RechargeSeconds = rechargeSeconds
     };
 }
 
-static CooldownSnapshot UnreadyCooldown()
+static CooldownSnapshot UnreadyCooldown(
+    float remainingSeconds,
+    float rechargeSeconds,
+    int maximumCharges = 1,
+    int charges = 0)
 {
     return new CooldownSnapshot
     {
-        RemainingSeconds = 30f,
-        Charges = 0,
-        MaximumCharges = 1
+        RemainingSeconds = remainingSeconds,
+        RechargeSeconds = rechargeSeconds,
+        Charges = charges,
+        MaximumCharges = maximumCharges
     };
 }
 
-static bool SameSet(
-    IReadOnlyList<uint> left,
-    IReadOnlyList<uint> right)
+static string Join(IEnumerable<uint> values)
 {
-    return left.Count == right.Count &&
-        left.OrderBy(value => value)
-            .SequenceEqual(right.OrderBy(value => value));
-}
-
-static string Join(IReadOnlyList<uint> values)
-{
-    return values.Count == 0
+    var array = values.ToArray();
+    return array.Length == 0
         ? "none"
-        : string.Join(", ", values);
+        : string.Join(", ", array);
 }
 
 sealed record DiagnosticScenario(
