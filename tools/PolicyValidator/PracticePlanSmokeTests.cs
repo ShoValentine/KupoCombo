@@ -4,6 +4,7 @@ using KupoCombo.Services;
 
 internal static class PracticePlanSmokeTests
 {
+    private const uint Unmend = 3624;
     private const uint Bloodspiller = 7392;
     private const uint EdgeOfDarkness = 16467;
     private const uint EdgeOfShadow = 16470;
@@ -99,20 +100,27 @@ internal static class PracticePlanSmokeTests
                 "Opening Edge MP projection was not attached to its weave window.");
         }
 
-        ValidateMpLedger(policy, definition);
+        ValidateLiveSession(policy, definition);
 
         Console.WriteLine(
             "Practice plan smoke test passed: 120-second player-timed plan, " +
-            "explicit phases, MP projection, and live MP attribution are active.");
+            "explicit phases, stable live timeline, MP projection, and live MP attribution are active.");
     }
 
-    private static void ValidateMpLedger(
+    private static void ValidateLiveSession(
         RuleSetTrainingPolicy policy,
         RulePolicyDefinition definition)
     {
         var session = new TrainingSession();
         session.Start(policy, 100);
         session.RefreshState(state => CopyState(CreateState(definition), state));
+        session.ProcessAction(Unmend);
+
+        if (Math.Abs(session.Snapshot.CombatTimeSeconds - 2.4d) > 0.001d)
+        {
+            throw new InvalidDataException(
+                "Live practice time did not advance by the player's adjusted GCD.");
+        }
 
         session.RefreshState(state => state.SetGauge("mp", 3000));
         session.ProcessAction(EdgeOfShadow);
