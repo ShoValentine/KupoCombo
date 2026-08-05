@@ -88,11 +88,15 @@ internal static class PracticePlanSmokeTests
                 "Practice plan did not cover the full burst cycle.");
         }
 
-        if (plan.Steps[0].ExpectedMpBefore != 6000 ||
-            plan.Steps[0].ExpectedMpAfter != 3000)
+        var openingEdgeStep = plan.Steps.FirstOrDefault(step =>
+            step.SuggestedActionIds.Contains(EdgeOfShadow));
+
+        if (openingEdgeStep == null ||
+            openingEdgeStep.ExpectedMpBefore != 6000 ||
+            openingEdgeStep.ExpectedMpAfter != 3000)
         {
             throw new InvalidDataException(
-                "Opening Edge MP projection was not attached to the first plan step.");
+                "Opening Edge MP projection was not attached to its weave window.");
         }
 
         ValidateMpLedger(policy, definition);
