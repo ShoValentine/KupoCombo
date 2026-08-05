@@ -306,7 +306,7 @@
           "cooldown": "livingShadow",
           "conditions": {
             "all": [
-              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 30 }
             ]
           },
           "suggestionReason": "Living Shadow is ready; use it promptly for maximum uses."
@@ -320,7 +320,7 @@
           "cooldown": "delirium",
           "conditions": {
             "all": [
-              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 30 }
             ],
             "none": [
               { "source": "statusActive", "key": "delirium", "operator": "equal", "value": true }
@@ -337,7 +337,7 @@
           "cooldown": "carveAndSpit",
           "conditions": {
             "all": [
-              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 30 }
             ]
           },
           "suggestionReason": "Carve and Spit is ready; avoid losing a use."
@@ -352,7 +352,7 @@
           "threshold": 2,
           "conditions": {
             "all": [
-              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 30 }
             ]
           },
           "suggestionReason": "Spend a Shadowbringer charge before charge recovery is wasted."
@@ -366,7 +366,7 @@
           "cooldown": "saltedEarth",
           "conditions": {
             "all": [
-              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 10 }
+              { "source": "combatTimeSeconds", "operator": "greaterThanOrEqual", "value": 30 }
             ]
           },
           "suggestionReason": "Salted Earth is ready; place it without unnecessary drift."
