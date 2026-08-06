@@ -26,6 +26,23 @@
       },
       "ruleOverrides": [
         {
+          "id": "open-with-unmend",
+          "conditions": {
+            "all": [
+              {
+                "source": "acceptedActionCount",
+                "operator": "equal",
+                "value": 0
+              },
+              {
+                "source": "combatTimeSeconds",
+                "operator": "lessThan",
+                "value": 25
+              }
+            ]
+          }
+        },
+        {
           "id": "prevent-mp-overcap",
           "type": "useAction",
           "conditions": {
