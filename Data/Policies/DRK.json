@@ -11,6 +11,10 @@
         "maximumTargetCount": 1,
         "assumesContinuousUptime": true,
         "burstCycleSeconds": 120,
+        "minorBurstCycleSeconds": 60,
+        "openerDurationSeconds": 25,
+        "burstWindowSeconds": 20,
+        "poolingWindowSeconds": 15,
         "notes": "Level-100 single-target uninterrupted training-dummy profile. Action mechanics come from the shared PvE catalogue; this file owns priority, pooling and burst alignment."
       },
       "actions": {
@@ -20,13 +24,202 @@
         "souleater": { "actionId": 3632, "lane": "gcd", "role": "graded", "minimumLevel": 26 },
         "livingShadow": { "actionId": 16472, "lane": "weave", "role": "advisory", "minimumLevel": 80 },
         "disesteem": { "actionId": 36932, "lane": "gcd", "role": "graded", "minimumLevel": 100, "adjustedFrom": "livingShadow" },
-        "delirium": { "actionId": 7390, "lane": "weave", "role": "advisory", "minimumLevel": 68 },
+        "delirium": {
+          "actionId": 7390,
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 68,
+          "forecastEffects": [
+            {
+              "type": "setStateValue",
+              "state": "bloodWeaponStacks",
+              "value": 3
+            }
+          ]
+        },
         "bloodspiller": { "actionId": 7392, "lane": "gcd", "role": "graded", "minimumLevel": 62 },
-        "scarletDelirium": { "actionId": 36928, "lane": "gcd", "role": "graded", "minimumLevel": 96, "adjustedFrom": "bloodspiller" },
-        "comeuppance": { "actionId": 36929, "lane": "gcd", "role": "graded", "minimumLevel": 96, "adjustedFrom": "bloodspiller" },
-        "torcleaver": { "actionId": 36930, "lane": "gcd", "role": "graded", "minimumLevel": 96, "adjustedFrom": "bloodspiller" },
+        "scarletDelirium": {
+          "actionId": 36928,
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 96,
+          "adjustedFrom": "bloodspiller",
+          "forecastEffects": [
+            {
+              "type": "addStateValue",
+              "state": "mp",
+              "value": 600,
+              "maximum": 10000
+            },
+            {
+              "type": "addStateValue",
+              "state": "mp",
+              "value": 600,
+              "maximum": 10000,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "bloodWeaponStacks", "operator": "greaterThan", "value": 0 }
+                ]
+              }
+            },
+            {
+              "type": "addStateValue",
+              "state": "blood",
+              "value": 10,
+              "maximum": 100,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "bloodWeaponStacks", "operator": "greaterThan", "value": 0 }
+                ]
+              }
+            },
+            {
+              "type": "addStateValue",
+              "state": "bloodWeaponStacks",
+              "value": -1,
+              "minimum": 0,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "bloodWeaponStacks", "operator": "greaterThan", "value": 0 }
+                ]
+              }
+            }
+          ]
+        },
+        "comeuppance": {
+          "actionId": 36929,
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 96,
+          "adjustedFrom": "bloodspiller",
+          "forecastEffects": [
+            {
+              "type": "addStateValue",
+              "state": "mp",
+              "value": 600,
+              "maximum": 10000
+            },
+            {
+              "type": "addStateValue",
+              "state": "mp",
+              "value": 600,
+              "maximum": 10000,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "bloodWeaponStacks", "operator": "greaterThan", "value": 0 }
+                ]
+              }
+            },
+            {
+              "type": "addStateValue",
+              "state": "blood",
+              "value": 10,
+              "maximum": 100,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "bloodWeaponStacks", "operator": "greaterThan", "value": 0 }
+                ]
+              }
+            },
+            {
+              "type": "addStateValue",
+              "state": "bloodWeaponStacks",
+              "value": -1,
+              "minimum": 0,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "bloodWeaponStacks", "operator": "greaterThan", "value": 0 }
+                ]
+              }
+            }
+          ]
+        },
+        "torcleaver": {
+          "actionId": 36930,
+          "lane": "gcd",
+          "role": "graded",
+          "minimumLevel": 96,
+          "adjustedFrom": "bloodspiller",
+          "forecastEffects": [
+            {
+              "type": "addStateValue",
+              "state": "mp",
+              "value": 600,
+              "maximum": 10000
+            },
+            {
+              "type": "addStateValue",
+              "state": "mp",
+              "value": 600,
+              "maximum": 10000,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "bloodWeaponStacks", "operator": "greaterThan", "value": 0 }
+                ]
+              }
+            },
+            {
+              "type": "addStateValue",
+              "state": "blood",
+              "value": 10,
+              "maximum": 100,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "bloodWeaponStacks", "operator": "greaterThan", "value": 0 }
+                ]
+              }
+            },
+            {
+              "type": "addStateValue",
+              "state": "bloodWeaponStacks",
+              "value": -1,
+              "minimum": 0,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "bloodWeaponStacks", "operator": "greaterThan", "value": 0 }
+                ]
+              }
+            }
+          ]
+        },
         "edgeOfDarkness": { "actionId": 16467, "lane": "weave", "role": "observed", "minimumLevel": 40 },
-        "edgeOfShadow": { "actionId": 16470, "lane": "weave", "role": "advisory", "minimumLevel": 74, "adjustedFrom": "edgeOfDarkness" },
+        "edgeOfShadow": {
+          "actionId": 16470,
+          "lane": "weave",
+          "role": "advisory",
+          "minimumLevel": 74,
+          "adjustedFrom": "edgeOfDarkness",
+          "overrideCatalogueForecastEffects": true,
+          "forecastEffects": [
+            {
+              "type": "addStateValue",
+              "state": "mp",
+              "value": -3000,
+              "minimum": 0,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "darkArts", "operator": "equal", "value": false }
+                ]
+              }
+            },
+            {
+              "type": "setStateValue",
+              "state": "darkArts",
+              "value": 0,
+              "conditions": {
+                "all": [
+                  { "source": "stateValue", "key": "darkArts", "operator": "equal", "value": true }
+                ]
+              }
+            },
+            {
+              "type": "addStateValue",
+              "state": "darksideMs",
+              "value": 30000,
+              "maximum": 60000
+            }
+          ]
+        },
         "carveAndSpit": { "actionId": 3639, "lane": "weave", "role": "advisory", "minimumLevel": 60 },
         "shadowbringer": { "actionId": 25757, "lane": "weave", "role": "advisory", "minimumLevel": 90 },
         "saltedEarth": { "actionId": 3643, "lane": "weave", "role": "advisory", "minimumLevel": 52 },
@@ -41,7 +234,8 @@
         "mp": { "kind": "resource", "provider": "player.mp", "minimum": 0, "maximum": 10000, "unit": "mp" },
         "darksideMs": { "kind": "timer", "provider": "drk.darkside_ms", "minimum": 0, "maximum": 60000, "unit": "milliseconds" },
         "darkArts": { "kind": "boolean", "provider": "drk.dark_arts" },
-        "deliriumStep": { "kind": "integer", "provider": "drk.delirium_step", "minimum": 0 }
+        "deliriumStep": { "kind": "integer", "provider": "drk.delirium_step", "minimum": 0 },
+        "bloodWeaponStacks": { "kind": "integer", "provider": "drk.blood_weapon_stacks", "minimum": 0, "maximum": 3 }
       },
       "combos": {
         "souleater": {
