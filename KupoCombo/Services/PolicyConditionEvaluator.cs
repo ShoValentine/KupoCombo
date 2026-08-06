@@ -93,6 +93,12 @@ internal sealed class PolicyConditionEvaluator
                     context.GetCooldown(condition.Key, state)?.Charges ?? 0,
                     condition),
 
+            PolicyConditionSource.CooldownRemainingSeconds =>
+                CompareNumber(
+                    context.GetCooldown(condition.Key, state)
+                        ?.RemainingSeconds ?? 0f,
+                    condition),
+
             PolicyConditionSource.ComboAction =>
                 CompareAction(
                     state.NativeComboActionId,
