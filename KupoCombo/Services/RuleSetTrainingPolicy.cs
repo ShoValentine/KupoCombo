@@ -48,6 +48,14 @@ public sealed class RuleSetTrainingPolicy :
     public IReadOnlyCollection<uint> AdvisoryActionIds =>
         context.AdvisoryActionIds;
 
+    public IReadOnlyCollection<string> TrackedResources =>
+        Definition.StateInputs
+            .Where(item =>
+                item.Value.Kind == PolicyStateValueKind.Resource &&
+                item.Value.TrackTransactions)
+            .Select(item => item.Key)
+            .ToArray();
+
     public bool IgnoreUntrackedActions => true;
 
     public TrainingDecision Evaluate(TrainingState state)
@@ -82,47 +90,36 @@ public sealed class RuleSetTrainingPolicy :
         };
     }
 
-    public int GetExpectedMpDelta(
+    public IReadOnlyDictionary<string, int> GetExpectedResourceDeltas(
         uint actionId,
         TrainingState state)
     {
-        foreach (var (alias, action) in Definition.Actions)
+        var actionAlias = FindActionAlias(actionId, state);
+
+        if (string.IsNullOrWhiteSpace(actionAlias))
         {
-            var resolvedActionId = context.GetActionId(alias, state);
-
-            if (action.ActionId != actionId && resolvedActionId != actionId)
-            {
-                continue;
-            }
-
-            var mpEffects = action.ForecastEffects
-                .Where(effect =>
-                    effect.Type == PolicyForecastEffectType.AddStateValue &&
-                    effect.State.Equals(
-                        "mp",
-                        StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-
-            if (mpEffects.Length > 0)
-            {
-                return (int)Math.Round(
-                    mpEffects
-                        .Where(effect =>
-                            conditionEvaluator.Matches(
-                                effect.Conditions,
-                                state))
-                        .Sum(effect => effect.Value));
-            }
-
-            if (action.MpCost.HasValue)
-            {
-                return -Math.Max(0, action.MpCost.Value);
-            }
-
-            return 0;
+            return new Dictionary<string, int>(
+                StringComparer.OrdinalIgnoreCase);
         }
 
-        return 0;
+        var before = CaptureResourceValues(state);
+        var simulatedState = state.Clone();
+        ApplyForecastActionEffects(simulatedState, actionAlias);
+        var after = CaptureResourceValues(simulatedState);
+        var deltas = new Dictionary<string, int>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var resource in before.Keys)
+        {
+            var delta = after[resource] - before[resource];
+
+            if (delta != 0)
+            {
+                deltas[resource] = delta;
+            }
+        }
+
+        return deltas;
     }
 
     private IReadOnlyList<TrainingForecastStep> ForecastCore(
@@ -154,7 +151,7 @@ public sealed class RuleSetTrainingPolicy :
             }
 
             var phase = DetermineRotationPhase(simulatedState);
-            var expectedMpBefore = simulatedState.GetGauge("mp");
+            var resourcesBefore = CaptureResourceValues(simulatedState);
             var appliedWeaves = ApplyForecastWeaveWindow(simulatedState);
             var evaluation = EvaluateCore(simulatedState);
 
@@ -176,6 +173,7 @@ public sealed class RuleSetTrainingPolicy :
                 simulatedState,
                 evaluation.GcdMatch,
                 isGcd: true);
+            var resourcesAfter = CaptureResourceValues(simulatedState);
 
             forecast.Add(
                 new TrainingForecastStep
@@ -186,8 +184,9 @@ public sealed class RuleSetTrainingPolicy :
                     Phase = phase,
                     GcdActionId = evaluation.Decision.PreferredActionId,
                     SuggestedActionIds = appliedWeaves,
-                    ExpectedMpBefore = expectedMpBefore,
-                    ExpectedMpAfter = simulatedState.GetGauge("mp"),
+                    ResourceProjections = BuildResourceProjections(
+                        resourcesBefore,
+                        resourcesAfter),
                     Reason = evaluation.Decision.Reason,
                     SuggestionReason = string.Join(
                         " ",
@@ -373,7 +372,8 @@ public sealed class RuleSetTrainingPolicy :
             var action = context.GetAction(alias);
 
             if (action.ActionId != adjustedActionId ||
-                !context.IsActionAvailable(alias, state.Level))
+                !context.IsActionAvailable(alias, state.Level) ||
+                !CanUseActionWithinResourceReserves(rule, alias, state))
             {
                 continue;
             }
@@ -530,7 +530,8 @@ public sealed class RuleSetTrainingPolicy :
     {
         match = default!;
 
-        if (!context.IsActionAvailable(actionAlias, state.Level))
+        if (!context.IsActionAvailable(actionAlias, state.Level) ||
+            !CanUseActionWithinResourceReserves(rule, actionAlias, state))
         {
             return false;
         }
@@ -560,6 +561,47 @@ public sealed class RuleSetTrainingPolicy :
             actionAlias,
             context.GetActionId(actionAlias, state),
             acceptableActions);
+        return true;
+    }
+
+    private bool CanUseActionWithinResourceReserves(
+        PolicyRuleDefinition rule,
+        string actionAlias,
+        TrainingState state)
+    {
+        if (DetermineRotationPhase(state) != RotationPhase.Pooling ||
+            rule.AllowBelowResourceReserve ||
+            rule.Type == PolicyRuleType.PreventResourceOvercap)
+        {
+            return true;
+        }
+
+        var guardedResources = Definition.StateInputs
+            .Where(item =>
+                item.Value.Kind == PolicyStateValueKind.Resource &&
+                item.Value.PoolingReserve.HasValue)
+            .ToArray();
+
+        if (guardedResources.Length == 0)
+        {
+            return true;
+        }
+
+        var simulatedState = state.Clone();
+        ApplyForecastActionEffects(simulatedState, actionAlias);
+
+        foreach (var (resource, definition) in guardedResources)
+        {
+            var before = context.GetStateValue(resource, state);
+            var after = context.GetStateValue(resource, simulatedState);
+            var reserve = definition.PoolingReserve!.Value;
+
+            if (after < before && after < reserve)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -814,6 +856,57 @@ public sealed class RuleSetTrainingPolicy :
         }
 
         context.SetStateValue(effect.State, state, value);
+    }
+
+    private Dictionary<string, int> CaptureResourceValues(
+        TrainingState state)
+    {
+        return Definition.StateInputs
+            .Where(item => item.Value.Kind == PolicyStateValueKind.Resource)
+            .ToDictionary(
+                item => item.Key,
+                item => (int)Math.Round(
+                    context.GetStateValue(item.Key, state)),
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyDictionary<string, ResourceProjection>
+        BuildResourceProjections(
+            IReadOnlyDictionary<string, int> before,
+            IReadOnlyDictionary<string, int> after)
+    {
+        var projections = new Dictionary<string, ResourceProjection>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (resource, beforeValue) in before)
+        {
+            projections[resource] = new ResourceProjection
+            {
+                Resource = resource,
+                Before = beforeValue,
+                After = after.TryGetValue(resource, out var afterValue)
+                    ? afterValue
+                    : beforeValue
+            };
+        }
+
+        return projections;
+    }
+
+    private string FindActionAlias(
+        uint actionId,
+        TrainingState state)
+    {
+        foreach (var (alias, action) in Definition.Actions)
+        {
+            if (action.ActionId == actionId ||
+                context.GetActionId(alias, state) == actionId)
+            {
+                return alias;
+            }
+        }
+
+        return string.Empty;
     }
 
     private void AdvanceForecastTimers(
