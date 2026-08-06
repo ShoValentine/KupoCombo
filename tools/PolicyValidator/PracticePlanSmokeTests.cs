@@ -122,8 +122,8 @@ internal static class PracticePlanSmokeTests
                 "Live practice time did not advance by the player's adjusted GCD.");
         }
 
-        session.ObserveAction(EdgeOfShadow);
         session.RefreshState(state => state.SetGauge("mp", 6000));
+        session.ProcessAction(EdgeOfShadow);
 
         if (session.MpTransactions.Any(transaction =>
                 transaction.Kind == MpTransactionKind.ActionWindow &&
@@ -133,7 +133,6 @@ internal static class PracticePlanSmokeTests
                 "Edge was closed before its delayed MP spend arrived.");
         }
 
-        session.ProcessAction(EdgeOfShadow);
         session.RefreshState(state => state.SetGauge("mp", 3000));
 
         var actionTransaction = session.MpTransactions.LastOrDefault();
@@ -146,7 +145,7 @@ internal static class PracticePlanSmokeTests
             actionTransaction.UnattributedDelta != 0)
         {
             throw new InvalidDataException(
-                "Delayed Edge MP spend was not attributed to the detected action.");
+                "Delayed Edge MP spend was not attributed to the processed action.");
         }
 
         session.RefreshState(state => state.SetGauge("mp", 3200));
