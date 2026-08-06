@@ -11,6 +11,8 @@ namespace KupoCombo.Services;
 
 public unsafe sealed class TrainingStateReader
 {
+    private const uint BloodWeaponStatusId = 742;
+
     private readonly IJobGauges jobGauges;
     private readonly IObjectTable objectTable;
     private readonly IPlayerState playerState;
@@ -304,6 +306,9 @@ public unsafe sealed class TrainingStateReader
         state.SetGauge(
             "delirium_step",
             Convert.ToInt32(gauge.DeliriumComboStep));
+        state.SetStateValue(
+            "blood_weapon_stacks",
+            state.GetStatusStacks(BloodWeaponStatusId));
     }
 
     private void RefreshMachinist(TrainingState state)
