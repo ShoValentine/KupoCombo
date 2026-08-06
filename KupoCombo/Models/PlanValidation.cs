@@ -39,7 +39,9 @@ public enum PlanValidationCode
     ResourceDiscontinuity,
     ResourceOutOfBounds,
     CooldownUnavailable,
-    CommitmentChanged
+    CommitmentChanged,
+    InvalidRecoveryPrefix,
+    InvalidRecoveryConvergence
 }
 
 public sealed class PlanValidationIssue
