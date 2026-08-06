@@ -1,0 +1,223 @@
+{
+  "$schema": "../Schemas/burst-resource-targets.schema.json",
+  "schemaVersion": 1,
+  "policies": [
+    {
+      "policyId": "drk-standard-dummy-100",
+      "job": "DRK",
+      "minimumLevel": 100,
+      "burstAnchors": [
+        {
+          "actionId": 16472,
+          "cycleSeconds": 120
+        },
+        {
+          "actionId": 7390,
+          "cycleSeconds": 60
+        },
+        {
+          "actionId": 3639,
+          "cycleSeconds": 60
+        }
+      ],
+      "minorBurstCycleSeconds": 120,
+      "burstWindowSeconds": 20,
+      "poolingWindowSeconds": 15,
+      "resources": {
+        "mp": {
+          "displayName": "MP",
+          "poolingReserve": 9000,
+          "rationale": "Enter the two-minute raid-buff window with three full paid Edge casts banked. The modelled Delirium/Blood Weapon chain and Carve and Spit then provide 4,200 additional MP, while a stored Dark Arts proc supplies the fifth effective Edge in the 5/2 plan."
+        },
+        "blood": {
+          "displayName": "Blood",
+          "poolingReserve": 50,
+          "rationale": "Carry one Bloodspiller into the two-minute raid-buff window, while still allowing the overcap-prevention rule to spend at 80 before Souleater adds 20."
+        }
+      },
+      "ruleOverrides": [
+        {
+          "id": "open-with-unmend",
+          "conditions": {
+            "all": [
+              {
+                "source": "acceptedActionCount",
+                "operator": "equal",
+                "value": 0
+              },
+              {
+                "source": "combatTimeSeconds",
+                "operator": "lessThan",
+                "value": 25
+              }
+            ]
+          }
+        },
+        {
+          "id": "prevent-mp-overcap",
+          "type": "useAction",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "mp",
+                "operator": "greaterThanOrEqual",
+                "value": 10000
+              }
+            ]
+          }
+        },
+        {
+          "id": "refresh-darkside",
+          "allowBelowResourceReserve": true
+        }
+      ],
+      "sources": [
+        "Official FFXIV Dark Knight job guide, Patch 7.5: Edge costs 3,000 MP; Delirium grants Blood Weapon; Scarlet Delirium, Comeuppance and Torcleaver restore MP; Bloodspiller costs 50 Blood.",
+        "Icy Veins Dark Knight Rotation, Patch 7.5: the 5/2 plan banks five effective Edge uses for raid buffs and carries extra Blood for another Bloodspiller."
+      ]
+    },
+    {
+      "policyId": "mch-standard-dummy-100",
+      "job": "MCH",
+      "minimumLevel": 100,
+      "burstAnchors": [
+        {
+          "actionId": 2878,
+          "cycleSeconds": 120
+        },
+        {
+          "actionId": 7414,
+          "cycleSeconds": 120
+        }
+      ],
+      "minorBurstCycleSeconds": 120,
+      "burstWindowSeconds": 20,
+      "poolingWindowSeconds": 15,
+      "resources": {
+        "heat": {
+          "displayName": "Heat",
+          "poolingReserve": 50,
+          "rationale": "Hold the cost of one paid Hypercharge for the two-minute window. Barrel Stabilizer supplies the second, free Hypercharge used for the recommended double-Hypercharge burst."
+        },
+        "battery": {
+          "displayName": "Battery",
+          "poolingReserve": 80,
+          "rationale": "Carry 80 Battery into the two-minute window so Air Anchor can add 20 and produce a 100-Battery Queen inside raid buffs."
+        }
+      },
+      "ruleOverrides": [
+        {
+          "id": "prevent-heat-overcap",
+          "type": "useAction",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "heat",
+                "operator": "greaterThanOrEqual",
+                "value": 90
+              }
+            ],
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "prevent-battery-overcap",
+          "type": "useAction",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "battery",
+                "operator": "greaterThanOrEqual",
+                "value": 90
+              }
+            ],
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "robotActive",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          }
+        }
+      ],
+      "additionalRules": [
+        {
+          "id": "deploy-queen-after-air-anchor",
+          "type": "useAction",
+          "lane": "weave",
+          "priority": 760,
+          "action": "automatonQueen",
+          "allowBelowResourceReserve": true,
+          "conditions": {
+            "all": [
+              {
+                "source": "lastAction",
+                "operator": "equal",
+                "value": "airAnchor"
+              },
+              {
+                "source": "stateValue",
+                "key": "battery",
+                "operator": "greaterThanOrEqual",
+                "value": 100
+              },
+              {
+                "source": "stateValue",
+                "key": "robotActive",
+                "operator": "equal",
+                "value": false
+              }
+            ]
+          },
+          "suggestionReason": "Deploy the 100-Battery Queen immediately after the two-minute Air Anchor inside raid buffs."
+        },
+        {
+          "id": "deploy-queen-after-excavator",
+          "type": "useAction",
+          "lane": "weave",
+          "priority": 745,
+          "action": "automatonQueen",
+          "conditions": {
+            "all": [
+              {
+                "source": "lastAction",
+                "operator": "equal",
+                "value": "excavator"
+              },
+              {
+                "source": "stateValue",
+                "key": "battery",
+                "operator": "greaterThanOrEqual",
+                "value": 60
+              },
+              {
+                "source": "stateValue",
+                "key": "robotActive",
+                "operator": "equal",
+                "value": false
+              }
+            ]
+          },
+          "suggestionReason": "Deploy the opener Queen immediately after Excavator at 60 Battery, or use the same safe post-Excavator window for a later split Queen."
+        }
+      ],
+      "sources": [
+        "Official FFXIV Machinist job guide, Patch 7.5: Hypercharge costs 50 Heat; Air Anchor adds 20 Battery; Automaton Queen consumes the available Battery.",
+        "The Balance Machinist Basic Guide, Patch 7.3 fundamentals retained in 7.5: opener Queen at 60 after Excavator, odd-minute Queen at 90, two-minute Queen at 100 after Air Anchor, and double Hypercharge in two-minute windows.",
+        "Icy Veins Machinist Rotation, Patch 7.5: Barrel Stabilizer grants a free Hypercharge and two-minute Wildfire bursts use double Hypercharge."
+      ]
+    }
+  ]
+}

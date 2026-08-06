@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "job": "DRK",
+  "sequences": [
+    {
+      "sequenceId": "drk-standard-opener-dummy",
+      "summary": "Standard level 100 Dark Knight opener arranged around common raid-buff timing. This training-dummy version omits pre-pull The Blackest Night because the shield will not break, and it does not track the Strength Gemdraught item use.",
+      "startPrompt": {
+        "text": "Begin with Unmend when you are ready. Your first correct action starts the opener, kupo!",
+        "durationSeconds": 5
+      },
+      "mistakePrompt": {
+        "text": "That action was out of sequence. The opener has reset and is ready for another attempt.",
+        "durationSeconds": 5
+      },
+      "completionPrompt": {
+        "text": "Opener complete. Every planned action landed in order, kupo!",
+        "durationSeconds": 5
+      },
+      "steps": [
+        {
+          "step": 1,
+          "advice": "Unmend starts the GCD rolling while slightly delaying the heavy hits for typical raid-buff application.",
+          "timing": "Use roughly one second before the pull finishes.",
+          "commonMistake": "Opening with Hard Slash changes the alignment and requires an extra Hard Slash later."
+        },
+        {
+          "step": 2,
+          "advice": "Edge of Shadow applies Darkside early and begins spending MP before you can overcap.",
+          "timing": "Weave before Hard Slash only when doing so will not clip the GCD.",
+          "commonMistake": "Forcing this weave from long range can delay Hard Slash. Move it after Hard Slash instead if needed."
+        },
+        {
+          "step": 3,
+          "advice": "Hard Slash begins the Souleater combo. In real encounters, use your Grade 4 Gemdraught of Strength shortly before this GCD.",
+          "timing": "Enter melee range promptly after Unmend and keep the GCD rolling.",
+          "commonMistake": "Arriving late to melee range delays every burst action that follows."
+        },
+        {
+          "step": 4,
+          "advice": "Living Shadow has a long spawn delay and updates with buffs in real time, so summon it before raid buffs appear.",
+          "timing": "Use immediately after the first melee GCD.",
+          "commonMistake": "Delaying Living Shadow can push its final attacks outside party buffs.",
+          "prompt": {
+            "text": "Living Shadow goes out early so its full sequence reaches the raid-buff window.",
+            "durationSeconds": 4
+          }
+        },
+        {
+          "step": 5,
+          "advice": "Syphon Strike continues the combo and restores MP, helping fund the Edge casts inside the burst.",
+          "timing": "Use immediately when the GCD becomes available.",
+          "commonMistake": "Breaking the combo loses both damage and resource generation."
+        },
+        {
+          "step": 6,
+          "advice": "Souleater completes the basic combo and generates Blood before the main burst begins.",
+          "timing": "Finish the full combo before releasing the delayed high-potency actions.",
+          "commonMistake": "Starting the burst too early can place the strongest hits before party buffs are active."
+        },
+        {
+          "step": 7,
+          "advice": "Delirium enables the Scarlet Delirium combo and generates MP during the burst.",
+          "timing": "Align it with raid buffs and the upcoming three-GCD Delirium combo.",
+          "commonMistake": "Entering Delirium above 70 Blood can overcap. Spend Blood beforehand when necessary.",
+          "prompt": {
+            "text": "The main burst begins now. Keep the Delirium GCDs moving while weaving your cooldowns.",
+            "durationSeconds": 4
+          }
+        },
+        {
+          "step": 8,
+          "advice": "Disesteem is granted by Living Shadow and provides a powerful GCD for the even-minute burst.",
+          "timing": "Delay it until party buffs are expected to be active.",
+          "commonMistake": "Using Disesteem immediately when it appears can place it before raid buffs."
+        },
+        {
+          "step": 9,
+          "advice": "Salted Earth is a 90-second offensive cooldown and should generally be used as soon as its planned window arrives.",
+          "timing": "Place it before the Delirium combo so its damage begins inside the burst.",
+          "commonMistake": "Holding it unnecessarily loses uses over the encounter."
+        },
+        {
+          "step": 10,
+          "advice": "This Edge of Shadow converts banked MP into damage while raid buffs are active.",
+          "timing": "Weave it without clipping and continue spending as Delirium restores MP.",
+          "commonMistake": "Entering the burst near the MP cap and delaying Edge can waste incoming MP."
+        },
+        {
+          "step": 11,
+          "advice": "Scarlet Delirium begins the three-part Delirium weaponskill combo.",
+          "timing": "Keep the GCD rolling and weave burst abilities between these weaponskills.",
+          "commonMistake": "Pausing between Delirium GCDs can lose buff coverage.",
+          "prompt": {
+            "text": "Keep the Delirium combo moving while weaving the remaining burst abilities.",
+            "durationSeconds": 4
+          }
+        },
+        {
+          "step": 12,
+          "advice": "Shadowbringer has two charges. Both belong in even-minute raid buffs whenever possible.",
+          "timing": "Weave the first charge here and reserve the second for later in the same burst.",
+          "commonMistake": "Sitting on both charges risks losing a use and wastes raid-buff damage."
+        },
+        {
+          "step": 13,
+          "advice": "A second Edge spends the MP generated during Delirium while preserving room for further regeneration.",
+          "timing": "Weave after Scarlet Delirium without clipping the next GCD.",
+          "commonMistake": "Failing to spend MP during Delirium can cause an overcap before the burst ends."
+        },
+        {
+          "step": 14,
+          "advice": "Comeuppance is the second GCD of the Delirium combo and continues generating burst resources.",
+          "timing": "Use directly after Scarlet Delirium.",
+          "commonMistake": "Replacing it with a normal combo GCD interrupts the Delirium sequence."
+        },
+        {
+          "step": 15,
+          "advice": "Carve and Spit is a one-minute offensive cooldown that also restores MP.",
+          "timing": "Use promptly in each minute burst so it stays aligned with punctual raid buffs.",
+          "commonMistake": "Delaying it repeatedly can push later uses outside buff windows."
+        },
+        {
+          "step": 16,
+          "advice": "This Edge immediately spends the MP returned by Delirium and Carve and Spit.",
+          "timing": "Use it inside the same weave window only when your skill speed and latency permit it without clipping.",
+          "commonMistake": "Prioritising an aggressive double weave over the next GCD can reduce total damage."
+        },
+        {
+          "step": 17,
+          "advice": "Torcleaver completes the Delirium combo and is one of the highest-value GCDs in the burst.",
+          "timing": "Land it while party buffs and the Strength Gemdraught are active.",
+          "commonMistake": "Drifting the Delirium sequence can push Torcleaver outside short raid buffs."
+        },
+        {
+          "step": 18,
+          "advice": "The second Shadowbringer charge completes the pair reserved for the even-minute burst.",
+          "timing": "Use before the raid-buff window closes.",
+          "commonMistake": "Saving this charge for later weakens the two-minute burst and may cause charge overcap."
+        },
+        {
+          "step": 19,
+          "advice": "Bloodspiller spends banked Blood for an additional high-potency GCD during buffs.",
+          "timing": "Even-minute bursts should include at least one extra Bloodspiller beyond the Delirium combo.",
+          "commonMistake": "Spending too much Blood before the burst can leave this GCD unavailable."
+        },
+        {
+          "step": 20,
+          "advice": "Salt and Darkness detonates Salted Earth for additional burst damage.",
+          "timing": "Use before Salted Earth expires and while buffs remain active where possible.",
+          "commonMistake": "Forgetting the follow-up wastes a large portion of Salted Earth's value."
+        }
+      ]
+    }
+  ]
+}

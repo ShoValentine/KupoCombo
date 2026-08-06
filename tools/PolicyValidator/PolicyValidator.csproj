@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\KupoCombo\Models\ActionObservation.cs"
+             Link="Models\ActionObservation.cs" />
+    <Compile Include="..\..\KupoCombo\Models\ActionResolution.cs"
+             Link="Models\ActionResolution.cs" />
+    <Compile Include="..\..\KupoCombo\Models\BurstTimelineProfileRegistry.cs"
+             Link="Models\BurstTimelineProfileRegistry.cs" />
+    <Compile Include="..\..\KupoCombo\Models\PlanValidation.cs"
+             Link="Models\PlanValidation.cs" />
+    <Compile Include="..\..\KupoCombo\Models\PracticePlan.cs"
+             Link="Models\PracticePlan.cs" />
+    <Compile Include="..\..\KupoCombo\Models\PveActionCatalogDefinition.cs"
+             Link="Models\PveActionCatalogDefinition.cs" />
+    <Compile Include="..\..\KupoCombo\Models\RecoveryPlan.cs"
+             Link="Models\RecoveryPlan.cs" />
+    <Compile Include="..\..\KupoCombo\Models\RulePolicyDefinition.cs"
+             Link="Models\RulePolicyDefinition.cs" />
+    <Compile Include="..\..\KupoCombo\Models\SequenceDefinition.cs"
+             Link="Models\SequenceDefinition.cs" />
+    <Compile Include="..\..\KupoCombo\Models\TrainingDecision.cs"
+             Link="Models\TrainingDecision.cs" />
+    <Compile Include="..\..\KupoCombo\Models\TrainingForecastStep.cs"
+             Link="Models\TrainingForecastStep.cs" />
+    <Compile Include="..\..\KupoCombo\Models\TrainingState.cs"
+             Link="Models\TrainingState.cs" />
+    <Compile Include="..\..\KupoCombo\Services\ActionResolutionPipeline.cs"
+             Link="Services\ActionResolutionPipeline.cs" />
+    <Compile Include="..\..\KupoCombo\Services\BurstResourceTargetLoader.cs"
+             Link="Services\BurstResourceTargetLoader.cs" />
+    <Compile Include="..\..\KupoCombo\Services\IPracticePlanPolicy.cs"
+             Link="Services\IPracticePlanPolicy.cs" />
+    <Compile Include="..\..\KupoCombo\Services\ITrainingForecastPolicy.cs"
+             Link="Services\ITrainingForecastPolicy.cs" />
+    <Compile Include="..\..\KupoCombo\Services\ITrainingPolicy.cs"
+             Link="Services\ITrainingPolicy.cs" />
+    <Compile Include="..\..\KupoCombo\Services\LegacyDarkKnightComboPolicy.cs"
+             Link="Services\LegacyDarkKnightComboPolicy.cs" />
+    <Compile Include="..\..\KupoCombo\Services\PolicyConditionEvaluator.cs"
+             Link="Services\PolicyConditionEvaluator.cs" />
+    <Compile Include="..\..\KupoCombo\Services\PolicyEvaluationContext.cs"
+             Link="Services\PolicyEvaluationContext.cs" />
+    <Compile Include="..\..\KupoCombo\Services\PracticePlanValidator.cs"
+             Link="Services\PracticePlanValidator.cs" />
+    <Compile Include="..\..\KupoCombo\Services\PveActionCatalogLoader.cs"
+             Link="Services\PveActionCatalogLoader.cs" />
+    <Compile Include="..\..\KupoCombo\Services\RecoveryPlanEngine.cs"
+             Link="Services\RecoveryPlanEngine.cs" />
+    <Compile Include="..\..\KupoCombo\Services\RecoveryPlanValidator.cs"
+             Link="Services\RecoveryPlanValidator.cs" />
+    <Compile Include="..\..\KupoCombo\Services\RulePolicyLoader.cs"
+             Link="Services\RulePolicyLoader.cs" />
+    <Compile Include="..\..\KupoCombo\Services\RuleSetTrainingPolicy.cs"
+             Link="Services\RuleSetTrainingPolicy.cs" />
+    <Compile Include="..\..\KupoCombo\Services\SequenceTrainingPolicy.cs"
+             Link="Services\SequenceTrainingPolicy.cs" />
+    <Compile Include="..\..\KupoCombo\Services\TrainingSession.cs"
+             Link="Services\TrainingSession.cs" />
+  </ItemGroup>
+</Project>

@@ -16,6 +16,14 @@ public sealed class Configuration : IPluginConfiguration
 
     public float OverlayIconSpacing { get; set; } = 12.0f;
 
+    public bool ShowTrainingPrompts { get; set; } = true;
+
+    public float PromptScale { get; set; } = 1.0f;
+
+    public float PromptTextScale { get; set; } = 1.0f;
+
+    public float PromptMoogleScale { get; set; } = 1.0f;
+
     public void Save()
     {
         Plugin.PluginInterface.SavePluginConfig(this);

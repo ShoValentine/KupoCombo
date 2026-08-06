@@ -1,39 +1,63 @@
-name: Sample PR Builder for SamplePlugin
+name: KupoCombo PR Build
 
 on:
   pull_request:
     branches: [ master ]
 
-jobs:
+permissions:
+  contents: read
 
+concurrency:
+  group: kupocombo-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
   build:
     runs-on: windows-2022
-
-    env:
-      Solution_Name: SamplePlugin
 
     steps:
     - name: Checkout
       uses: actions/checkout@v5
+
+    - name: Install Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.13'
+
+    - name: Generate complete PvE action catalogues
+      run: python tools/ActionCatalogGenerator/generate_action_catalogues.py --output-root Data/Actions
+
+    - name: Verify committed action catalogues are current
+      run: git diff --exit-code -- Data/Actions/pve-actions.json Data/Actions/Jobs
+
+    - name: Store generated action catalogues
+      uses: actions/upload-artifact@v4
+      with:
+        name: GeneratedActionCatalogues
+        path: .\Data\Actions\**
+        if-no-files-found: error
+        retention-days: 1
 
     - name: Install .NET
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: 10.0.x
 
+    - name: Validate rule policies
+      run: dotnet run --project tools/PolicyValidator/PolicyValidator.csproj --configuration Release -- Data/Policies
+
     - name: Download Dalamud
       run: |
         Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
         Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
 
-    - name: Build with dotnet
-      run: dotnet build --configuration Release
+    - name: Build KupoCombo
+      run: dotnet build KupoCombo.sln --configuration Release
 
-    - name: Store artifacts
+    - name: Store artefacts
       uses: actions/upload-artifact@v4
       with:
-        name: SamplePlugin
-        path: .\SamplePlugin\bin\x64\Release\SamplePlugin\*
+        name: KupoCombo
+        path: .\KupoCombo\bin\x64\Release\KupoCombo\*
         if-no-files-found: error
         retention-days: 1
-

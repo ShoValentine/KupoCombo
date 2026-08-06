@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ShoValentine/KupoCombo/schemas/pve-action-catalog.schema.json",
+  "title": "KupoCombo PvE Action Catalogue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "gameVersion", "actions"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "gameVersion": { "type": "string", "minLength": 1 },
+    "generatedFrom": { "type": "string" },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/action" }
+    }
+  },
+  "$defs": {
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actionId",
+        "name",
+        "job",
+        "kind",
+        "minimumLevel",
+        "castSeconds",
+        "recastSeconds",
+        "timelineLockSeconds",
+        "maximumCharges"
+      ],
+      "properties": {
+        "actionId": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "job": { "type": "string", "minLength": 2, "maxLength": 4 },
+        "kind": { "enum": ["weaponskill", "spell", "ability", "limitBreak"] },
+        "minimumLevel": { "type": "integer", "minimum": 1 },
+        "castSeconds": { "type": "number", "minimum": 0 },
+        "recastSeconds": { "type": "number", "minimum": 0 },
+        "timelineLockSeconds": { "type": "number", "minimum": 0 },
+        "maximumCharges": { "type": "integer", "minimum": 1 },
+        "potency": { "type": "integer", "minimum": 0 },
+        "comboFromActionId": { "type": "integer", "minimum": 1 },
+        "comboPotency": { "type": "integer", "minimum": 0 },
+        "mpCost": { "type": "integer", "minimum": 0 },
+        "adjustedFromActionId": { "type": "integer", "minimum": 1 },
+        "source": { "type": "string" },
+        "forecastEffects": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/forecastEffect" }
+        }
+      }
+    },
+    "forecastEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": [
+            "addStateValue",
+            "setStateValue",
+            "addStatus",
+            "removeStatus",
+            "setAdjustedAction",
+            "resetAdjustedAction"
+          ]
+        },
+        "state": { "type": "string", "minLength": 1 },
+        "value": { "type": "number" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "status": { "type": "string", "minLength": 1 },
+        "durationSeconds": { "type": "number", "minimum": 0 },
+        "stacks": { "type": "integer", "minimum": 1 },
+        "action": { "type": "string", "minLength": 1 },
+        "adjustedAction": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
