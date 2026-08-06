@@ -134,6 +134,26 @@
           "minimum": 1,
           "default": 120
         },
+        "minorBurstCycleSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 60
+        },
+        "openerDurationSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 25
+        },
+        "burstWindowSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 20
+        },
+        "poolingWindowSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 15
+        },
         "notes": {
           "type": "string"
         }
@@ -176,6 +196,68 @@
         },
         "adjustedFrom": {
           "$ref": "#/$defs/alias"
+        },
+        "overrideCatalogueForecastEffects": {
+          "type": "boolean",
+          "default": false
+        },
+        "forecastEffects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/forecastEffect"
+          }
+        }
+      }
+    },
+    "forecastEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "addStateValue",
+            "setStateValue",
+            "addStatus",
+            "removeStatus",
+            "setAdjustedAction",
+            "resetAdjustedAction"
+          ]
+        },
+        "state": {
+          "$ref": "#/$defs/alias"
+        },
+        "value": {
+          "type": "number"
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "status": {
+          "$ref": "#/$defs/alias"
+        },
+        "durationSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "stacks": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "action": {
+          "$ref": "#/$defs/alias"
+        },
+        "adjustedAction": {
+          "$ref": "#/$defs/alias"
+        },
+        "conditions": {
+          "$ref": "#/$defs/conditionSet"
         }
       }
     },
