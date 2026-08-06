@@ -105,7 +105,13 @@ public sealed class RuleSetTrainingPolicy :
 
             if (mpEffects.Length > 0)
             {
-                return (int)Math.Round(mpEffects.Sum(effect => effect.Value));
+                return (int)Math.Round(
+                    mpEffects
+                        .Where(effect =>
+                            conditionEvaluator.Matches(
+                                effect.Conditions,
+                                state))
+                        .Sum(effect => effect.Value));
             }
 
             if (action.MpCost.HasValue)
@@ -709,8 +715,34 @@ public sealed class RuleSetTrainingPolicy :
                 break;
 
             case PolicyRuleType.PreventResourceOvercap:
-                LowerForecastResource(state, match.Rule);
+                ApplyFallbackResourceSpend(state, match);
                 break;
+        }
+    }
+
+    private void ApplyFallbackResourceSpend(
+        TrainingState state,
+        RuleMatch match)
+    {
+        if (string.IsNullOrWhiteSpace(match.Rule.Resource))
+        {
+            return;
+        }
+
+        var actionModelsResource = context
+            .GetAction(match.ActionAlias)
+            .ForecastEffects
+            .Any(effect =>
+                (effect.Type == PolicyForecastEffectType.AddStateValue ||
+                 effect.Type == PolicyForecastEffectType.SetStateValue) &&
+                effect.State.Equals(
+                    match.Rule.Resource,
+                    StringComparison.OrdinalIgnoreCase) &&
+                conditionEvaluator.Matches(effect.Conditions, state));
+
+        if (!actionModelsResource)
+        {
+            LowerForecastResource(state, match.Rule);
         }
     }
 
@@ -720,6 +752,11 @@ public sealed class RuleSetTrainingPolicy :
     {
         foreach (var effect in context.GetAction(actionAlias).ForecastEffects)
         {
+            if (!conditionEvaluator.Matches(effect.Conditions, state))
+            {
+                continue;
+            }
+
             switch (effect.Type)
             {
                 case PolicyForecastEffectType.AddStateValue:
