@@ -57,9 +57,20 @@ internal static class MachinistIcyVeinsBaselineSmokeTests
                 "pve-actions.json"));
         PveActionCatalogLoader.Apply(definition, catalogue);
 
-        var forecast = new RuleSetTrainingPolicy(definition)
-            .Forecast(CreateFreshOpenerState(), 8);
+        var policy = new RuleSetTrainingPolicy(definition);
+        ValidateOpeningRibbon(policy);
+        ValidateEightSecondHyperchargeGate(policy);
 
+        Console.WriteLine(
+            "MCH Icy Veins baseline smoke test passed: the fixed tool spine, " +
+            "opening weave placement, exact eight-second Hypercharge gate, " +
+            "delayed burst, and short-GCD weave cap held.");
+    }
+
+    private static void ValidateOpeningRibbon(
+        RuleSetTrainingPolicy policy)
+    {
+        var forecast = policy.Forecast(CreateFreshOpenerState(), 8);
         var expectedGcdPrefix = new uint[]
         {
             AirAnchor,
@@ -108,10 +119,48 @@ internal static class MachinistIcyVeinsBaselineSmokeTests
                 step.SuggestedActionIds.Count <= 1,
                 "A Blazing Shot window received more than one weave.");
         }
+    }
 
-        Console.WriteLine(
-            "MCH Icy Veins baseline smoke test passed: the fixed tool spine, " +
-            "opening weave placement, delayed Hypercharge, and short-GCD weave cap held.");
+    private static void ValidateEightSecondHyperchargeGate(
+        RuleSetTrainingPolicy policy)
+    {
+        var state = CreateFreshOpenerState();
+
+        for (var index = 0; index < 5; index++)
+        {
+            state.RecordAcceptedAction(HeatedSplitShot);
+        }
+
+        state.SetGauge("heat", 50);
+        state.SetCooldown(Wildfire, UnreadyCooldown(60f, 120f));
+        state.SetCooldown(DoubleCheck, UnreadyCooldown(20f, 30f, 3, 1));
+        state.SetCooldown(Checkmate, UnreadyCooldown(20f, 30f, 3, 1));
+        SetToolCooldowns(state, 8f);
+
+        Require(
+            !policy.Evaluate(state).SuggestedActionIds.Contains(Hypercharge),
+            "Hypercharge was allowed with a tool exactly eight seconds away.");
+
+        SetToolCooldowns(state, 8.1f);
+
+        Require(
+            policy.Evaluate(state).SuggestedActionIds.Contains(Hypercharge),
+            "Hypercharge remained blocked with every tool more than eight seconds away.");
+    }
+
+    private static void SetToolCooldowns(
+        TrainingState state,
+        float remainingSeconds)
+    {
+        state.SetCooldown(
+            AirAnchor,
+            UnreadyCooldown(remainingSeconds, 40f));
+        state.SetCooldown(
+            Drill,
+            UnreadyCooldown(remainingSeconds, 20f, 2, 1));
+        state.SetCooldown(
+            ChainSaw,
+            UnreadyCooldown(remainingSeconds, 60f));
     }
 
     private static TrainingState CreateFreshOpenerState()
@@ -156,6 +205,21 @@ internal static class MachinistIcyVeinsBaselineSmokeTests
             Charges = maximumCharges,
             MaximumCharges = maximumCharges,
             RechargeSeconds = rechargeSeconds
+        };
+    }
+
+    private static CooldownSnapshot UnreadyCooldown(
+        float remainingSeconds,
+        float rechargeSeconds,
+        int maximumCharges = 1,
+        int charges = 0)
+    {
+        return new CooldownSnapshot
+        {
+            RemainingSeconds = remainingSeconds,
+            RechargeSeconds = rechargeSeconds,
+            Charges = charges,
+            MaximumCharges = maximumCharges
         };
     }
 
