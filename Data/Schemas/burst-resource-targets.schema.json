@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ShoValentine/KupoCombo/schemas/burst-resource-targets.schema.json",
+  "title": "KupoCombo Burst Resource Targets",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "policies"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "policies": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/policy" }
+    }
+  },
+  "$defs": {
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policyId", "resources"],
+      "properties": {
+        "policyId": { "type": "string", "minLength": 1 },
+        "minorBurstCycleSeconds": { "type": "integer", "minimum": 1 },
+        "burstWindowSeconds": { "type": "integer", "minimum": 0 },
+        "poolingWindowSeconds": { "type": "integer", "minimum": 0 },
+        "resources": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/resource" }
+        },
+        "ruleOverrides": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ruleOverride" }
+        },
+        "additionalRules": {
+          "type": "array",
+          "items": { "$ref": "rule-policy.schema.json#/$defs/ruleBase" }
+        },
+        "sources": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["poolingReserve"],
+      "properties": {
+        "displayName": { "type": "string" },
+        "poolingReserve": { "type": "number" },
+        "rationale": { "type": "string" }
+      }
+    },
+    "ruleOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": {
+          "enum": [
+            "continueCombo",
+            "followAdjustedAction",
+            "preventResourceOvercap",
+            "preventChargeOvercap",
+            "maintainStatus",
+            "spendStatusStacks",
+            "followProc",
+            "useCooldown",
+            "useAction"
+          ]
+        },
+        "threshold": { "type": "number" },
+        "allowBelowResourceReserve": { "type": "boolean" },
+        "conditions": { "$ref": "rule-policy.schema.json#/$defs/conditionSet" }
+      }
+    }
+  }
+}
