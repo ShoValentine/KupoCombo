@@ -14,10 +14,10 @@ public enum RotationPhase
     Recovery
 }
 
-public enum MpTransactionKind
+public enum ResourceTransactionKind
 {
     ActionWindow,
-    PassiveRecovery,
+    UnattributedGain,
     Reconciliation
 }
 
@@ -79,22 +79,35 @@ public sealed class PlayerTimingProfile
     }
 }
 
-public sealed class MpTransaction
+public sealed class ResourceProjection
+{
+    public string Resource { get; init; } = string.Empty;
+
+    public int Before { get; init; }
+
+    public int After { get; init; }
+
+    public int Delta => After - Before;
+}
+
+public sealed class ResourceTransaction
 {
     public DateTime RecordedAtUtc { get; init; } = DateTime.UtcNow;
 
-    public MpTransactionKind Kind { get; init; }
+    public ResourceTransactionKind Kind { get; init; }
+
+    public string Resource { get; init; } = string.Empty;
 
     public IReadOnlyList<uint> ActionIds { get; init; } =
         Array.Empty<uint>();
 
-    public int BeforeMp { get; init; }
+    public int Before { get; init; }
 
-    public int AfterMp { get; init; }
+    public int After { get; init; }
 
     public int ExpectedDelta { get; init; }
 
-    public int ObservedDelta => AfterMp - BeforeMp;
+    public int ObservedDelta => After - Before;
 
     public int UnattributedDelta => ObservedDelta - ExpectedDelta;
 }
