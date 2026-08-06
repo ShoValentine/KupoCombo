@@ -18,6 +18,16 @@ internal static class BurstResourceTargetLoader
 
     private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
+    private static string? configuredPluginDirectory;
+
+    public static void ConfigurePluginDirectory(string? pluginDirectory)
+    {
+        if (!string.IsNullOrWhiteSpace(pluginDirectory))
+        {
+            configuredPluginDirectory = pluginDirectory;
+        }
+    }
+
     public static void Apply(RulePolicyDefinition definition)
     {
         if (!Targets.Value.TryGetValue(definition.Id, out var target))
@@ -303,24 +313,67 @@ internal static class BurstResourceTargetLoader
 
     private static string ResolveTargetPath()
     {
-        var candidates = new List<string>
-        {
-            Path.Combine(
+        return ResolveTargetPath(
+            new[]
+            {
+                configuredPluginDirectory,
                 AppContext.BaseDirectory,
-                "BurstTargets",
-                FileName),
+                Environment.CurrentDirectory
+            });
+    }
+
+    internal static string ResolveTargetPath(
+        IEnumerable<string?> searchRoots)
+    {
+        var candidates = new List<string>();
+
+        foreach (var root in searchRoots
+                     .Where(root => !string.IsNullOrWhiteSpace(root))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            AddTargetCandidates(candidates, root!);
+        }
+
+        var path = candidates
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(File.Exists);
+
+        return path ?? throw new FileNotFoundException(
+            "The KupoCombo burst-resource target file could not be found.",
+            FileName);
+    }
+
+    private static void AddTargetCandidates(
+        ICollection<string> candidates,
+        string root)
+    {
+        string fullRoot;
+
+        try
+        {
+            fullRoot = Path.GetFullPath(root);
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or
+            NotSupportedException or
+            PathTooLongException)
+        {
+            return;
+        }
+
+        candidates.Add(
             Path.Combine(
-                Environment.CurrentDirectory,
+                fullRoot,
+                "BurstTargets",
+                FileName));
+        candidates.Add(
+            Path.Combine(
+                fullRoot,
                 "Data",
                 "BurstTargets",
-                FileName),
-            Path.Combine(
-                Environment.CurrentDirectory,
-                "BurstTargets",
-                FileName)
-        };
+                FileName));
 
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        var directory = new DirectoryInfo(fullRoot);
 
         for (var depth = 0; depth < 8 && directory != null; depth++)
         {
@@ -332,14 +385,6 @@ internal static class BurstResourceTargetLoader
                     FileName));
             directory = directory.Parent;
         }
-
-        var path = candidates
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault(File.Exists);
-
-        return path ?? throw new FileNotFoundException(
-            "The KupoCombo burst-resource target file could not be found.",
-            FileName);
     }
 
     private static JsonSerializerOptions CreateJsonOptions()
