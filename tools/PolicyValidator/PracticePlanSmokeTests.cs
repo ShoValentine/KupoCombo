@@ -73,11 +73,20 @@ internal static class PracticePlanSmokeTests
 
         if (plan.Steps[0].Phase != RotationPhase.Opener ||
             !plan.Steps.Any(step => step.Phase == RotationPhase.Filler) ||
-            !plan.Steps.Any(step => step.Phase == RotationPhase.Pooling) ||
-            !plan.Steps.Any(step => step.Phase == RotationPhase.Burst))
+            !plan.Steps.Any(step => step.Phase == RotationPhase.Pooling))
         {
             throw new InvalidDataException(
-                "Practice plan did not distinguish opener, filler, pooling, and burst phases.");
+                "Opening-cycle plan did not distinguish opener, filler, and pooling phases.");
+        }
+
+        var burstState = CreateState(definition);
+        burstState.SetCombatTimeSeconds(120d);
+        var burstPlan = policy.BuildPracticePlan(burstState);
+
+        if (burstPlan.Steps.FirstOrDefault()?.Phase != RotationPhase.Burst)
+        {
+            throw new InvalidDataException(
+                "The next true two-minute raid-buff boundary was not labelled as Burst.");
         }
 
         var finalStep = plan.Steps[^1];
@@ -105,8 +114,8 @@ internal static class PracticePlanSmokeTests
 
         Console.WriteLine(
             "Practice plan smoke test passed: 120-second player-timed plan, " +
-            "explicit phases, stable live timeline, generic resource projection, " +
-            "and delayed live resource attribution are active.");
+            "opening-cycle phases, next-cycle burst boundary, stable live timeline, " +
+            "generic resource projection, and delayed live resource attribution are active.");
     }
 
     private static void ValidateLiveSession(
