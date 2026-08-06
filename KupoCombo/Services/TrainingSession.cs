@@ -209,6 +209,7 @@ public sealed class TrainingSession
             return Ignored(actionId);
         }
 
+        ObserveAction(actionId);
         var decision = CurrentDecision;
 
         if (decision.IsSuggested(actionId))
