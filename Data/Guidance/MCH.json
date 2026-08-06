@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "job": "MCH",
+  "sequences": [
+    {
+      "sequenceId": "mch-tool-alignment-icy-veins",
+      "summary": "The six-action general-purpose level-100 alignment documented by Icy Veins 7.55: Air Anchor, Drill, Barrel Stabilizer, Chain Saw, Excavator, and Full Metal Field. This compact drill teaches the fixed backbone before adding resource and weave decisions.",
+      "startPrompt": {
+        "text": "Begin the tool alignment with Air Anchor, kupo!",
+        "durationSeconds": 5
+      },
+      "mistakePrompt": {
+        "text": "The tool alignment changed. Reset and begin again with Air Anchor.",
+        "durationSeconds": 5
+      },
+      "completionPrompt": {
+        "text": "Tool alignment complete. The rotation backbone is now on cooldown together.",
+        "durationSeconds": 5
+      },
+      "steps": [
+        {
+          "step": 1,
+          "advice": "Air Anchor begins the alignment and generates Battery.",
+          "timing": "First GCD.",
+          "commonMistake": "Delaying it shifts every future Air Anchor."
+        },
+        {
+          "step": 2,
+          "advice": "Drill follows so its two-charge recast starts immediately.",
+          "timing": "Second GCD.",
+          "commonMistake": "Starting with filler leaves a tool unused."
+        },
+        {
+          "step": 3,
+          "advice": "Barrel Stabilizer prepares both Full Metal Field and a free Hypercharge.",
+          "timing": "Weave after Drill before Chain Saw.",
+          "commonMistake": "Using it during Overheat crowds the short GCD window."
+        },
+        {
+          "step": 4,
+          "advice": "Chain Saw continues the tool block and grants Excavator Ready.",
+          "timing": "Next GCD.",
+          "commonMistake": "Delaying it shifts the 60-second line."
+        },
+        {
+          "step": 5,
+          "advice": "Excavator immediately consumes the transformed Chain Saw button.",
+          "timing": "Directly after Chain Saw.",
+          "commonMistake": "Letting the proc expire loses damage and Battery."
+        },
+        {
+          "step": 6,
+          "advice": "Full Metal Field completes the block and is already a guaranteed critical direct hit.",
+          "timing": "After Barrel Stabilizer has granted the proc.",
+          "commonMistake": "Using Reassemble on it has no effect."
+        }
+      ]
+    },
+    {
+      "sequenceId": "mch-standard-opener-dummy-icy-veins",
+      "summary": "A training-dummy baseline built from the Icy Veins 7.55 general tool alignment and Hypercharge prerequisites. It omits the raid tincture. The Double Check and Checkmate pattern is a low-latency reference; preserving the GCD is more important than forcing every weave.",
+      "startPrompt": {
+        "text": "Prime Reassemble, then open with Air Anchor. Tools first, burst second, kupo!",
+        "durationSeconds": 5
+      },
+      "mistakePrompt": {
+        "text": "The baseline order changed. Reset so the tool cooldowns can be aligned cleanly.",
+        "durationSeconds": 5
+      },
+      "completionPrompt": {
+        "text": "Baseline opener complete: tools aligned, Queen deployed, and five Blazing Shots fired.",
+        "durationSeconds": 5
+      },
+      "steps": [
+        {
+          "step": 1,
+          "advice": "Prime Air Anchor with Reassemble so the first eligible 660-potency tool receives the guaranteed critical direct hit.",
+          "timing": "Use shortly before the first GCD; the five-second duration is generous enough for a clean pull.",
+          "commonMistake": "Using it before Full Metal Field wastes the buff because Full Metal Field cannot consume Reassemble.",
+          "prompt": {
+            "text": "Prime the first tool with Reassemble, then begin with Air Anchor.",
+            "durationSeconds": 4
+          }
+        },
+        {
+          "step": 2,
+          "advice": "Air Anchor begins the documented general-purpose alignment and generates 20 Battery.",
+          "timing": "Use as the first GCD and avoid delaying it.",
+          "commonMistake": "Opening with filler causes every later 40-second Air Anchor to drift."
+        },
+        {
+          "step": 3,
+          "advice": "Spend the second Reassemble charge on another eligible 660-potency tool.",
+          "timing": "Weave before Drill without clipping.",
+          "commonMistake": "Holding both charges at cap wastes recharge time; spending it on a combo shot wastes potency."
+        },
+        {
+          "step": 4,
+          "advice": "Lower Double Check below two stored charges before Hypercharge.",
+          "timing": "Use in the spare weave slot before Drill.",
+          "commonMistake": "Entering Hypercharge with two or more charges forces overcap as Blazing Shot reduces its recast."
+        },
+        {
+          "step": 5,
+          "advice": "Drill is the second tool in the baseline and starts its 20-second charge recovery early.",
+          "timing": "Use immediately after Air Anchor.",
+          "commonMistake": "Sitting on two Drill charges loses future charge recovery."
+        },
+        {
+          "step": 6,
+          "advice": "Barrel Stabilizer belongs between Drill and Chain Saw in the general alignment.",
+          "timing": "Weave here while the normal 2.5-second GCD provides room.",
+          "commonMistake": "Using it inside Overheat crowds a 1.5-second weave window.",
+          "prompt": {
+            "text": "The tool block is established. Barrel Stabilizer now bridges Drill into Chain Saw.",
+            "durationSeconds": 4
+          }
+        },
+        {
+          "step": 7,
+          "advice": "Lower Checkmate below two stored charges before Hypercharge.",
+          "timing": "Use alongside Barrel Stabilizer only when latency permits a clean double weave; otherwise use the next normal window.",
+          "commonMistake": "Clipping a GCD to force the double weave costs more than moving Checkmate."
+        },
+        {
+          "step": 8,
+          "advice": "Chain Saw is the third main tool and grants Excavator Ready.",
+          "timing": "Use immediately after the Barrel Stabilizer weave.",
+          "commonMistake": "Delaying Chain Saw shifts Excavator and the entire 60-second tool line."
+        },
+        {
+          "step": 9,
+          "advice": "Continue preparing Double Check for the coming Hypercharge window.",
+          "timing": "Use in the normal weave window before Excavator.",
+          "commonMistake": "Starting Hypercharge with two or more charges creates forced overcap."
+        },
+        {
+          "step": 10,
+          "advice": "Excavator follows Chain Saw and adds another 20 Battery.",
+          "timing": "Use while Chain Saw is transformed; do not insert filler between them.",
+          "commonMistake": "Missing the 30-second proc loses a full 660-potency GCD and 20 Battery."
+        },
+        {
+          "step": 11,
+          "advice": "Deploy Queen once the opening tools have produced at least 50 Battery.",
+          "timing": "Weave after Excavator so Queen begins attacking during the opening burst.",
+          "commonMistake": "Summoning before 50 Battery is impossible; holding to 100 in the opener can waste buffed pet damage."
+        },
+        {
+          "step": 12,
+          "advice": "Spend the second Checkmate charge so both charge skills are below two before Hypercharge.",
+          "timing": "Use the remaining normal-GCD weave slot before Full Metal Field.",
+          "commonMistake": "Entering Hypercharge with two stored Checkmate charges causes a forced overcap."
+        },
+        {
+          "step": 13,
+          "advice": "Full Metal Field completes the opening tool block.",
+          "timing": "Use after Barrel Stabilizer's proc is active and after Queen is deployed.",
+          "commonMistake": "Do not spend Reassemble here; Full Metal Field is already a guaranteed critical direct hit."
+        },
+        {
+          "step": 14,
+          "advice": "Apply Wildfire only after the tools are safely on cooldown.",
+          "timing": "Double weave with Hypercharge in a normal GCD window when latency permits.",
+          "commonMistake": "Applying Wildfire before the tool block encourages an early Hypercharge that delays core tools.",
+          "prompt": {
+            "text": "The core tools are down. Begin the Wildfire and Hypercharge burst.",
+            "durationSeconds": 4
+          }
+        },
+        {
+          "step": 15,
+          "advice": "Enter Hypercharge immediately after Wildfire.",
+          "timing": "Confirm Air Anchor, Drill and Chain Saw are unavailable and charge skills are below two charges.",
+          "commonMistake": "Hypercharging while a tool is due within roughly eight seconds causes tool drift."
+        },
+        {
+          "step": 16,
+          "advice": "Begin the five-shot Overheat sequence.",
+          "timing": "Keep the 1.5-second GCD rolling.",
+          "commonMistake": "Trying to double weave between Blazing Shots clips and drifts the rest of the rotation.",
+          "prompt": {
+            "text": "Overheat begins. One weave at most between each Blazing Shot.",
+            "durationSeconds": 4
+          }
+        },
+        {
+          "step": 17,
+          "advice": "Spend one Double Check charge in this short window.",
+          "timing": "Only one weave belongs between Blazing Shots.",
+          "commonMistake": "Double weaving here may still fit five shots but pushes every later tool."
+        },
+        {
+          "step": 18,
+          "advice": "Use the second Blazing Shot immediately.",
+          "timing": "Treat the Overheat sequence as a fast, even rhythm.",
+          "commonMistake": "Hesitating can lose a stack before the ten-second window ends."
+        },
+        {
+          "step": 19,
+          "advice": "Alternate to Checkmate.",
+          "timing": "Use one charge and return directly to Blazing Shot.",
+          "commonMistake": "Using the same charge skill repeatedly can leave the other capped."
+        },
+        {
+          "step": 20,
+          "advice": "Use the third Blazing Shot.",
+          "timing": "Maintain the 1.5-second cadence.",
+          "commonMistake": "Looking ahead too far on the ribbon can make the current short GCD late."
+        },
+        {
+          "step": 21,
+          "advice": "Spend the recovered Double Check charge.",
+          "timing": "Use only one weave.",
+          "commonMistake": "Forcing this weave on high latency is optional; preserving GCD timing is more important."
+        },
+        {
+          "step": 22,
+          "advice": "Use the fourth Blazing Shot.",
+          "timing": "Continue without pausing.",
+          "commonMistake": "Allowing the normal combo or a tool to interrupt consumes time from Overheat."
+        },
+        {
+          "step": 23,
+          "advice": "Spend the recovered Checkmate charge.",
+          "timing": "Use only one weave and prepare for the final shot.",
+          "commonMistake": "Clipping here can push the final Blazing Shot or the next tool."
+        },
+        {
+          "step": 24,
+          "advice": "Finish with the fifth Blazing Shot.",
+          "timing": "Exit Overheat cleanly and return to whichever tool or combo action is next.",
+          "commonMistake": "Continuing to predict Blazing Shot after five stacks means the forecast state is wrong.",
+          "prompt": {
+            "text": "Five Blazing Shots complete. Return to tools and combo filler.",
+            "durationSeconds": 4
+          }
+        }
+      ]
+    }
+  ]
+}
