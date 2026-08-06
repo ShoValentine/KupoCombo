@@ -46,11 +46,14 @@ public sealed class TrainingSession
 
     private static readonly TimeSpan PlanRefreshInterval =
         TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan MpAttributionGracePeriod =
+        TimeSpan.FromMilliseconds(750);
 
     private readonly Queue<PendingMpAction> pendingMpActions = new();
     private bool hasReceivedLiveState;
     private DateTime nextPlanRefreshUtc = DateTime.MinValue;
-    private PendingMpObservation? pendingMpObservation;
+    private int pendingMpWindowBefore;
+    private DateTime pendingMpWindowStartedUtc = DateTime.MinValue;
 
     public ITrainingPolicy? Policy { get; private set; }
 
@@ -111,8 +114,7 @@ public sealed class TrainingSession
         LastExpectedActionId = 0;
         hasReceivedLiveState = false;
         nextPlanRefreshUtc = DateTime.MinValue;
-        pendingMpActions.Clear();
-        pendingMpObservation = null;
+        ClearPendingMpActions();
         CurrentPlan = PracticePlan.Empty;
         RecalculateDecision();
         State = CurrentDecision?.IsComplete == true
@@ -122,26 +124,23 @@ public sealed class TrainingSession
 
     public void ObserveAction(uint actionId)
     {
-        if (!IsActive || Policy == null)
+        if (!IsActive ||
+            Policy is not IPracticePlanPolicy planPolicy ||
+            !planPolicy.TracksMpAction(actionId, Snapshot))
         {
             return;
         }
 
-        var isKnownAction =
-            Contains(Policy.TrackedActionIds, actionId) ||
-            Contains(Policy.AdvisoryActionIds, actionId);
-
-        if (!isKnownAction)
+        if (pendingMpActions.Count == 0)
         {
-            return;
+            pendingMpWindowBefore = Snapshot.GetGauge("mp");
+            pendingMpWindowStartedUtc = DateTime.UtcNow;
         }
-
-        var expectedMpDelta = Policy is IPracticePlanPolicy planPolicy
-            ? planPolicy.GetExpectedMpDelta(actionId, Snapshot)
-            : 0;
 
         pendingMpActions.Enqueue(
-            new PendingMpAction(actionId, expectedMpDelta));
+            new PendingMpAction(
+                actionId,
+                planPolicy.GetExpectedMpDelta(actionId, Snapshot)));
     }
 
     public void RefreshState(Action<TrainingState> refresh)
@@ -158,7 +157,10 @@ public sealed class TrainingSession
 
         if (hadLiveState)
         {
-            RecordMpObservation(mpBefore, mpAfter);
+            RecordMpObservation(
+                mpBefore,
+                mpAfter,
+                DateTime.UtcNow);
         }
 
         if (!hasReceivedLiveState)
@@ -183,7 +185,7 @@ public sealed class TrainingSession
 
     public void Stop()
     {
-        FlushPendingMpObservation();
+        FlushPendingMpActions(Snapshot.GetGauge("mp"));
         Policy = null;
         CurrentDecision = null;
         CurrentPlan = PracticePlan.Empty;
@@ -193,8 +195,7 @@ public sealed class TrainingSession
         LastExpectedActionId = 0;
         hasReceivedLiveState = false;
         nextPlanRefreshUtc = DateTime.MinValue;
-        pendingMpActions.Clear();
-        pendingMpObservation = null;
+        ClearPendingMpActions();
         State = TrainingSessionState.Stopped;
     }
 
@@ -208,7 +209,6 @@ public sealed class TrainingSession
             return Ignored(actionId);
         }
 
-        AttributePendingMpObservation(actionId);
         var decision = CurrentDecision;
 
         if (decision.IsSuggested(actionId))
@@ -332,60 +332,45 @@ public sealed class TrainingSession
             Math.Clamp(elapsedSeconds, 0.5f, 10f));
     }
 
-    private void RecordMpObservation(int mpBefore, int mpAfter)
+    private void RecordMpObservation(
+        int mpBefore,
+        int mpAfter,
+        DateTime observedAtUtc)
     {
-        var pendingActions = pendingMpActions.ToArray();
-        pendingMpActions.Clear();
         var observedDelta = mpAfter - mpBefore;
 
-        if (pendingActions.Length > 0)
+        if (pendingMpActions.Count == 0)
         {
-            FlushPendingMpObservation();
+            RecordUnattributedMpMovement(mpBefore, mpAfter);
+            return;
+        }
+
+        var expectedDelta = pendingMpActions.Sum(
+            action => action.ExpectedMpDelta);
+        var actionObservedDelta = mpAfter - pendingMpWindowBefore;
+        var signMatched =
+            expectedDelta != 0 &&
+            actionObservedDelta != 0 &&
+            Math.Sign(expectedDelta) == Math.Sign(actionObservedDelta);
+        var graceExpired =
+            observedAtUtc - pendingMpWindowStartedUtc >=
+            MpAttributionGracePeriod;
+
+        if (signMatched || graceExpired)
+        {
             RecordActionMpTransaction(
-                pendingActions,
-                mpBefore,
+                pendingMpActions.ToArray(),
+                pendingMpWindowBefore,
                 mpAfter);
+            ClearPendingMpActions();
             return;
         }
 
-        if (observedDelta == 0)
+        if (observedDelta != 0)
         {
-            return;
+            RecordUnattributedMpMovement(mpBefore, mpAfter);
+            pendingMpWindowBefore = mpAfter;
         }
-
-        FlushPendingMpObservation();
-        pendingMpObservation = new PendingMpObservation(
-            mpBefore,
-            mpAfter);
-    }
-
-    private void AttributePendingMpObservation(uint actionId)
-    {
-        if (pendingMpObservation == null || Policy == null)
-        {
-            return;
-        }
-
-        var isKnownAction =
-            Contains(Policy.TrackedActionIds, actionId) ||
-            Contains(Policy.AdvisoryActionIds, actionId);
-
-        if (!isKnownAction)
-        {
-            FlushPendingMpObservation();
-            return;
-        }
-
-        var expectedMpDelta = Policy is IPracticePlanPolicy planPolicy
-            ? planPolicy.GetExpectedMpDelta(actionId, Snapshot)
-            : 0;
-        var observation = pendingMpObservation;
-        pendingMpObservation = null;
-
-        RecordActionMpTransaction(
-            new[] { new PendingMpAction(actionId, expectedMpDelta) },
-            observation.BeforeMp,
-            observation.AfterMp);
     }
 
     private void RecordActionMpTransaction(
@@ -406,16 +391,16 @@ public sealed class TrainingSession
             });
     }
 
-    private void FlushPendingMpObservation()
+    private void RecordUnattributedMpMovement(
+        int mpBefore,
+        int mpAfter)
     {
-        if (pendingMpObservation == null)
+        var observedDelta = mpAfter - mpBefore;
+
+        if (observedDelta == 0)
         {
             return;
         }
-
-        var observation = pendingMpObservation;
-        pendingMpObservation = null;
-        var observedDelta = observation.AfterMp - observation.BeforeMp;
 
         Snapshot.RecordMpTransaction(
             new MpTransaction
@@ -423,9 +408,30 @@ public sealed class TrainingSession
                 Kind = observedDelta > 0
                     ? MpTransactionKind.PassiveRecovery
                     : MpTransactionKind.Reconciliation,
-                BeforeMp = observation.BeforeMp,
-                AfterMp = observation.AfterMp
+                BeforeMp = mpBefore,
+                AfterMp = mpAfter
             });
+    }
+
+    private void FlushPendingMpActions(int currentMp)
+    {
+        if (pendingMpActions.Count == 0)
+        {
+            return;
+        }
+
+        RecordActionMpTransaction(
+            pendingMpActions.ToArray(),
+            pendingMpWindowBefore,
+            currentMp);
+        ClearPendingMpActions();
+    }
+
+    private void ClearPendingMpActions()
+    {
+        pendingMpActions.Clear();
+        pendingMpWindowBefore = 0;
+        pendingMpWindowStartedUtc = DateTime.MinValue;
     }
 
     private void RecalculateDecision()
@@ -741,8 +747,4 @@ public sealed class TrainingSession
     private sealed record PendingMpAction(
         uint ActionId,
         int ExpectedMpDelta);
-
-    private sealed record PendingMpObservation(
-        int BeforeMp,
-        int AfterMp);
 }
