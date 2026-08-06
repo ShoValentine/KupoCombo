@@ -135,13 +135,22 @@ public sealed class PracticePlan
     public PracticePlan WithSteps(
         IEnumerable<TrainingForecastStep> steps)
     {
+        var materialisedSteps = steps.ToArray();
+
+        if (double.IsFinite(HorizonSeconds) && HorizonSeconds > 0d)
+        {
+            materialisedSteps = materialisedSteps
+                .Where(step => step.StartsAtSeconds < HorizonSeconds)
+                .ToArray();
+        }
+
         return new PracticePlan
         {
             Job = Job,
             StartsAtCombatTimeSeconds = StartsAtCombatTimeSeconds,
             HorizonSeconds = HorizonSeconds,
             TimingProfile = TimingProfile.Clone(),
-            Steps = steps.ToArray()
+            Steps = materialisedSteps
         };
     }
 }
