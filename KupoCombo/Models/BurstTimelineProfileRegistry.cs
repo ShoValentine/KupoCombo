@@ -139,7 +139,7 @@ internal static class BurstTimelineProfileRegistry
                 cooldown,
                 cycleSeconds,
                 timeline,
-                index == 0
+                cooldown.IsReady
                     ? anchorReadySinceTimelineSeconds
                     : null);
         }
