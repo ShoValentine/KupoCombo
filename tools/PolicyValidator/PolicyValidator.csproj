@@ -23,6 +23,8 @@
              Link="Models\TrainingForecastStep.cs" />
     <Compile Include="..\..\KupoCombo\Models\TrainingState.cs"
              Link="Models\TrainingState.cs" />
+    <Compile Include="..\..\KupoCombo\Services\BurstResourceTargetLoader.cs"
+             Link="Services\BurstResourceTargetLoader.cs" />
     <Compile Include="..\..\KupoCombo\Services\IPracticePlanPolicy.cs"
              Link="Services\IPracticePlanPolicy.cs" />
     <Compile Include="..\..\KupoCombo\Services\ITrainingForecastPolicy.cs"
