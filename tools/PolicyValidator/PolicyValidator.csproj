@@ -53,6 +53,8 @@
              Link="Services\PveActionCatalogLoader.cs" />
     <Compile Include="..\..\KupoCombo\Services\RecoveryPlanEngine.cs"
              Link="Services\RecoveryPlanEngine.cs" />
+    <Compile Include="..\..\KupoCombo\Services\RecoveryPlanValidator.cs"
+             Link="Services\RecoveryPlanValidator.cs" />
     <Compile Include="..\..\KupoCombo\Services\RulePolicyLoader.cs"
              Link="Services\RulePolicyLoader.cs" />
     <Compile Include="..\..\KupoCombo\Services\RuleSetTrainingPolicy.cs"
