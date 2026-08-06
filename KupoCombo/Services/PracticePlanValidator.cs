@@ -493,7 +493,11 @@ public sealed class PracticePlanValidator
                 actionId);
         }
 
-        if (validateCurrentAdjustment)
+        // An empty adjustment map means the live client has not been sampled yet.
+        // Treat that state as unknown rather than falsely asserting every base
+        // action is currently unadjusted. Once any client observations exist,
+        // the execution head must match them exactly.
+        if (validateCurrentAdjustment && state.AdjustedActions.Count > 0)
         {
             ValidateAdjustedAction(
                 policy.Definition,
