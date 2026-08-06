@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using KupoCombo.Models;
 
@@ -14,6 +15,8 @@ internal sealed class PolicyEvaluationContext
 
     public PolicyEvaluationContext(RulePolicyDefinition definition)
     {
+        ValidateResourceDefinitions(definition);
+
         Definition = definition;
         actions = new Dictionary<string, PolicyActionDefinition>(
             definition.Actions,
@@ -181,6 +184,41 @@ internal sealed class PolicyEvaluationContext
         return value.Number.HasValue
             ? Convert.ToUInt32(value.Number.Value)
             : 0;
+    }
+
+    private static void ValidateResourceDefinitions(
+        RulePolicyDefinition definition)
+    {
+        foreach (var (alias, input) in definition.StateInputs)
+        {
+            if (!input.PoolingReserve.HasValue)
+            {
+                continue;
+            }
+
+            if (input.Kind != PolicyStateValueKind.Resource)
+            {
+                throw new InvalidDataException(
+                    $"State input '{alias}' in policy '{definition.Id}' declares " +
+                    "a pooling reserve but is not a resource.");
+            }
+
+            var reserve = input.PoolingReserve.Value;
+
+            if (input.Minimum.HasValue && reserve < input.Minimum.Value)
+            {
+                throw new InvalidDataException(
+                    $"Resource '{alias}' in policy '{definition.Id}' has a pooling " +
+                    "reserve below its minimum value.");
+            }
+
+            if (input.Maximum.HasValue && reserve > input.Maximum.Value)
+            {
+                throw new InvalidDataException(
+                    $"Resource '{alias}' in policy '{definition.Id}' has a pooling " +
+                    "reserve above its maximum value.");
+            }
+        }
     }
 
     private static string GetProviderLeaf(string provider)
