@@ -872,8 +872,10 @@ public sealed class TrainingSession
         {
             freshPlan = ReindexPlan(planPolicy.BuildPracticePlan(Snapshot));
 
-            if (!TryValidatePlan(freshPlan, faultOnFailure: true))
+            if (!TryValidatePlan(freshPlan, faultOnFailure: false))
             {
+                nextPlanRefreshUtc =
+                    DateTime.UtcNow + PlanRefreshInterval;
                 return;
             }
 
