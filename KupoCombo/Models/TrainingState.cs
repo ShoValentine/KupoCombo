@@ -41,13 +41,21 @@ public sealed class TrainingState
     private readonly Dictionary<uint, float> adjustedRecastSeconds = new();
     private readonly List<ResourceTransaction> resourceTransactions = new();
 
+    private double timelineCombatTimeSeconds;
+    private double? burstAnchorReadySinceTimelineSeconds;
+
     public string Job { get; private set; } = string.Empty;
 
     public int Level { get; private set; }
 
     public int TargetCount { get; private set; } = 1;
 
-    public double CombatTimeSeconds { get; private set; }
+    public double CombatTimeSeconds =>
+        TryGetBurstTimelineAlignment(out var alignment)
+            ? alignment.EffectiveCombatTimeSeconds
+            : timelineCombatTimeSeconds;
+
+    public double TimelineCombatTimeSeconds => timelineCombatTimeSeconds;
 
     public uint NativeComboActionId { get; private set; }
 
@@ -79,9 +87,22 @@ public sealed class TrainingState
     public IReadOnlyList<ResourceTransaction> ResourceTransactions =>
         resourceTransactions;
 
+    public bool TryGetBurstTimelineAlignment(
+        out BurstTimelineAlignment alignment)
+    {
+        return BurstTimelineProfileRegistry.TryAlign(
+            Job,
+            Level,
+            timelineCombatTimeSeconds,
+            cooldowns,
+            burstAnchorReadySinceTimelineSeconds,
+            out alignment);
+    }
+
     public void SetLevel(int level)
     {
         Level = Math.Max(0, level);
+        RefreshBurstAnchorTracking();
     }
 
     public void SetTargetCount(int targetCount)
@@ -91,7 +112,15 @@ public sealed class TrainingState
 
     public void SetCombatTimeSeconds(double seconds)
     {
-        CombatTimeSeconds = Math.Max(0d, seconds);
+        var next = Math.Max(0d, seconds);
+
+        if (next + 0.001d < timelineCombatTimeSeconds)
+        {
+            burstAnchorReadySinceTimelineSeconds = null;
+        }
+
+        timelineCombatTimeSeconds = next;
+        RefreshBurstAnchorTracking();
     }
 
     public void SetCombo(uint actionId, float remainingSeconds)
@@ -201,7 +230,16 @@ public sealed class TrainingState
 
     public void SetCooldown(uint actionId, CooldownSnapshot cooldown)
     {
+        var previousReady = cooldowns.TryGetValue(
+            actionId,
+            out var previous) &&
+            previous.IsReady;
+
         cooldowns[actionId] = cooldown;
+        UpdateBurstAnchorReadyState(
+            actionId,
+            previousReady,
+            cooldown.IsReady);
     }
 
     public CooldownSnapshot? GetCooldown(uint actionId)
@@ -236,7 +274,9 @@ public sealed class TrainingState
             Job = Job,
             Level = Level,
             TargetCount = TargetCount,
-            CombatTimeSeconds = CombatTimeSeconds,
+            timelineCombatTimeSeconds = timelineCombatTimeSeconds,
+            burstAnchorReadySinceTimelineSeconds =
+                burstAnchorReadySinceTimelineSeconds,
             NativeComboActionId = NativeComboActionId,
             ComboRemainingSeconds = ComboRemainingSeconds,
             LastObservedActionId = LastObservedActionId,
@@ -296,7 +336,8 @@ public sealed class TrainingState
         Job = job.Trim().ToUpperInvariant();
         Level = Math.Max(0, level);
         TargetCount = 1;
-        CombatTimeSeconds = 0d;
+        timelineCombatTimeSeconds = 0d;
+        burstAnchorReadySinceTimelineSeconds = null;
         NativeComboActionId = 0;
         ComboRemainingSeconds = 0f;
         LastObservedActionId = 0;
@@ -412,19 +453,21 @@ public sealed class TrainingState
                 : 999f;
         }
 
-        cooldowns[actionId] = new CooldownSnapshot
-        {
-            Charges = charges,
-            MaximumCharges = cooldown.MaximumCharges,
-            RemainingSeconds = remainingSeconds,
-            RechargeSeconds = cooldown.RechargeSeconds
-        };
+        SetCooldown(
+            actionId,
+            new CooldownSnapshot
+            {
+                Charges = charges,
+                MaximumCharges = cooldown.MaximumCharges,
+                RemainingSeconds = remainingSeconds,
+                RechargeSeconds = cooldown.RechargeSeconds
+            });
     }
 
     internal void AdvanceForecastTime(float seconds)
     {
         var elapsed = Math.Max(0f, seconds);
-        CombatTimeSeconds += elapsed;
+        timelineCombatTimeSeconds += elapsed;
         ComboRemainingSeconds = Math.Max(0f, ComboRemainingSeconds - elapsed);
 
         foreach (var item in statuses.ToArray())
@@ -458,13 +501,15 @@ public sealed class TrainingState
 
             if (cooldown.Charges >= cooldown.MaximumCharges)
             {
-                cooldowns[item.Key] = new CooldownSnapshot
-                {
-                    Charges = cooldown.MaximumCharges,
-                    MaximumCharges = cooldown.MaximumCharges,
-                    RemainingSeconds = 0f,
-                    RechargeSeconds = cooldown.RechargeSeconds
-                };
+                SetCooldown(
+                    item.Key,
+                    new CooldownSnapshot
+                    {
+                        Charges = cooldown.MaximumCharges,
+                        MaximumCharges = cooldown.MaximumCharges,
+                        RemainingSeconds = 0f,
+                        RechargeSeconds = cooldown.RechargeSeconds
+                    });
                 continue;
             }
 
@@ -497,13 +542,15 @@ public sealed class TrainingState
                 remaining += recharge;
             }
 
-            cooldowns[item.Key] = new CooldownSnapshot
-            {
-                Charges = charges,
-                MaximumCharges = cooldown.MaximumCharges,
-                RemainingSeconds = Math.Max(0f, remaining),
-                RechargeSeconds = recharge
-            };
+            SetCooldown(
+                item.Key,
+                new CooldownSnapshot
+                {
+                    Charges = charges,
+                    MaximumCharges = cooldown.MaximumCharges,
+                    RemainingSeconds = Math.Max(0f, remaining),
+                    RechargeSeconds = recharge
+                });
         }
     }
 
@@ -516,5 +563,49 @@ public sealed class TrainingState
     internal void Clear()
     {
         Begin(string.Empty, 0);
+    }
+
+    private void RefreshBurstAnchorTracking()
+    {
+        var primaryAnchor = cooldowns.FirstOrDefault(item =>
+            BurstTimelineProfileRegistry.IsPrimaryAnchor(
+                Job,
+                Level,
+                item.Key));
+
+        if (primaryAnchor.Key == 0 || !primaryAnchor.Value.IsReady)
+        {
+            burstAnchorReadySinceTimelineSeconds = null;
+            return;
+        }
+
+        burstAnchorReadySinceTimelineSeconds ??=
+            timelineCombatTimeSeconds;
+    }
+
+    private void UpdateBurstAnchorReadyState(
+        uint actionId,
+        bool wasReady,
+        bool isReady)
+    {
+        if (!BurstTimelineProfileRegistry.IsPrimaryAnchor(
+                Job,
+                Level,
+                actionId))
+        {
+            return;
+        }
+
+        if (!isReady)
+        {
+            burstAnchorReadySinceTimelineSeconds = null;
+            return;
+        }
+
+        if (!wasReady || !burstAnchorReadySinceTimelineSeconds.HasValue)
+        {
+            burstAnchorReadySinceTimelineSeconds =
+                timelineCombatTimeSeconds;
+        }
     }
 }
