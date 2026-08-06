@@ -20,6 +20,15 @@
       "required": ["policyId", "resources"],
       "properties": {
         "policyId": { "type": "string", "minLength": 1 },
+        "job": { "type": "string", "minLength": 1 },
+        "minimumLevel": { "type": "integer", "minimum": 1 },
+        "maximumLevel": { "type": "integer", "minimum": 1 },
+        "burstAnchorActionIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1 }
+        },
         "minorBurstCycleSeconds": { "type": "integer", "minimum": 1 },
         "burstWindowSeconds": { "type": "integer", "minimum": 0 },
         "poolingWindowSeconds": { "type": "integer", "minimum": 0 },
