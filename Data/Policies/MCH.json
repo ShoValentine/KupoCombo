@@ -136,6 +136,16 @@
           "adjustedFrom": "heatBlast",
           "forecastEffects": [
             {
+              "type": "reduceCooldown",
+              "action": "doubleCheck",
+              "value": 15
+            },
+            {
+              "type": "reduceCooldown",
+              "action": "checkmate",
+              "value": 15
+            },
+            {
               "type": "setStateValue",
               "state": "overheated",
               "value": 0,
