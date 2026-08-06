@@ -91,20 +91,22 @@ internal static class PracticePlanSmokeTests
 
         var openingEdgeStep = plan.Steps.FirstOrDefault(step =>
             step.SuggestedActionIds.Contains(EdgeOfShadow));
+        var openingMp = openingEdgeStep?.GetResourceProjection("mp");
 
-        if (openingEdgeStep == null ||
-            openingEdgeStep.ExpectedMpBefore != 6000 ||
-            openingEdgeStep.ExpectedMpAfter != 3000)
+        if (openingMp == null ||
+            openingMp.Before != 6000 ||
+            openingMp.After != 3000)
         {
             throw new InvalidDataException(
-                "Opening Edge MP projection was not attached to its weave window.");
+                "Opening Edge resource projection was not attached to its weave window.");
         }
 
         ValidateLiveSession(policy, definition);
 
         Console.WriteLine(
             "Practice plan smoke test passed: 120-second player-timed plan, " +
-            "explicit phases, stable live timeline, MP projection, and delayed live MP attribution are active.");
+            "explicit phases, stable live timeline, generic resource projection, " +
+            "and delayed live resource attribution are active.");
     }
 
     private static void ValidateLiveSession(
@@ -125,37 +127,42 @@ internal static class PracticePlanSmokeTests
         session.RefreshState(state => state.SetGauge("mp", 6000));
         session.ProcessAction(EdgeOfShadow);
 
-        if (session.MpTransactions.Any(transaction =>
-                transaction.Kind == MpTransactionKind.ActionWindow &&
+        if (session.ResourceTransactions.Any(transaction =>
+                transaction.Resource.Equals("mp", StringComparison.OrdinalIgnoreCase) &&
+                transaction.Kind == ResourceTransactionKind.ActionWindow &&
                 transaction.ActionIds.Contains(EdgeOfShadow)))
         {
             throw new InvalidDataException(
-                "Edge was closed before its delayed MP spend arrived.");
+                "Edge was closed before its delayed resource spend arrived.");
         }
 
         session.RefreshState(state => state.SetGauge("mp", 3000));
 
-        var actionTransaction = session.MpTransactions.LastOrDefault();
+        var actionTransaction = session.ResourceTransactions.LastOrDefault(
+            transaction => transaction.Resource.Equals(
+                "mp",
+                StringComparison.OrdinalIgnoreCase));
 
         if (actionTransaction == null ||
-            actionTransaction.Kind != MpTransactionKind.ActionWindow ||
+            actionTransaction.Kind != ResourceTransactionKind.ActionWindow ||
             !actionTransaction.ActionIds.SequenceEqual(new[] { EdgeOfShadow }) ||
             actionTransaction.ExpectedDelta != -3000 ||
             actionTransaction.ObservedDelta != -3000 ||
             actionTransaction.UnattributedDelta != 0)
         {
             throw new InvalidDataException(
-                "Delayed Edge MP spend was not attributed to the processed action.");
+                "Delayed Edge resource spend was not attributed to the processed action.");
         }
 
         session.RefreshState(state => state.SetGauge("mp", 3200));
 
-        if (!session.MpTransactions.Any(transaction =>
-                transaction.Kind == MpTransactionKind.PassiveRecovery &&
+        if (!session.ResourceTransactions.Any(transaction =>
+                transaction.Resource.Equals("mp", StringComparison.OrdinalIgnoreCase) &&
+                transaction.Kind == ResourceTransactionKind.UnattributedGain &&
                 transaction.ObservedDelta == 200))
         {
             throw new InvalidDataException(
-                "Passive MP recovery was not separated from action MP movement.");
+                "Unattributed MP recovery was not separated from action resource movement.");
         }
     }
 
