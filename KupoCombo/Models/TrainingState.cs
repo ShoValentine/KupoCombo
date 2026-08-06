@@ -464,6 +464,19 @@ public sealed class TrainingState
             });
     }
 
+    internal void ReduceCooldown(uint actionId, float seconds)
+    {
+        if (seconds <= 0f ||
+            !cooldowns.TryGetValue(actionId, out var cooldown))
+        {
+            return;
+        }
+
+        SetCooldown(
+            actionId,
+            AdvanceCooldown(cooldown, seconds));
+    }
+
     internal void AdvanceForecastTime(float seconds)
     {
         var elapsed = Math.Max(0f, seconds);
@@ -497,60 +510,9 @@ public sealed class TrainingState
 
         foreach (var item in cooldowns.ToArray())
         {
-            var cooldown = item.Value;
-
-            if (cooldown.Charges >= cooldown.MaximumCharges)
-            {
-                SetCooldown(
-                    item.Key,
-                    new CooldownSnapshot
-                    {
-                        Charges = cooldown.MaximumCharges,
-                        MaximumCharges = cooldown.MaximumCharges,
-                        RemainingSeconds = 0f,
-                        RechargeSeconds = cooldown.RechargeSeconds
-                    });
-                continue;
-            }
-
-            if (cooldown.RemainingSeconds >= 900f &&
-                cooldown.RechargeSeconds <= 0f)
-            {
-                continue;
-            }
-
-            var remaining = cooldown.RemainingSeconds - elapsed;
-            var charges = cooldown.Charges;
-            var recharge = cooldown.RechargeSeconds;
-
-            while (remaining <= 0f && charges < cooldown.MaximumCharges)
-            {
-                charges++;
-
-                if (charges >= cooldown.MaximumCharges)
-                {
-                    remaining = 0f;
-                    break;
-                }
-
-                if (recharge <= 0f)
-                {
-                    remaining = 0f;
-                    break;
-                }
-
-                remaining += recharge;
-            }
-
             SetCooldown(
                 item.Key,
-                new CooldownSnapshot
-                {
-                    Charges = charges,
-                    MaximumCharges = cooldown.MaximumCharges,
-                    RemainingSeconds = Math.Max(0f, remaining),
-                    RechargeSeconds = recharge
-                });
+                AdvanceCooldown(item.Value, elapsed));
         }
     }
 
@@ -563,6 +525,60 @@ public sealed class TrainingState
     internal void Clear()
     {
         Begin(string.Empty, 0);
+    }
+
+    private static CooldownSnapshot AdvanceCooldown(
+        CooldownSnapshot cooldown,
+        float elapsedSeconds)
+    {
+        if (cooldown.Charges >= cooldown.MaximumCharges)
+        {
+            return new CooldownSnapshot
+            {
+                Charges = cooldown.MaximumCharges,
+                MaximumCharges = cooldown.MaximumCharges,
+                RemainingSeconds = 0f,
+                RechargeSeconds = cooldown.RechargeSeconds
+            };
+        }
+
+        if (cooldown.RemainingSeconds >= 900f &&
+            cooldown.RechargeSeconds <= 0f)
+        {
+            return cooldown;
+        }
+
+        var remaining =
+            cooldown.RemainingSeconds - Math.Max(0f, elapsedSeconds);
+        var charges = cooldown.Charges;
+        var recharge = cooldown.RechargeSeconds;
+
+        while (remaining <= 0f && charges < cooldown.MaximumCharges)
+        {
+            charges++;
+
+            if (charges >= cooldown.MaximumCharges)
+            {
+                remaining = 0f;
+                break;
+            }
+
+            if (recharge <= 0f)
+            {
+                remaining = 0f;
+                break;
+            }
+
+            remaining += recharge;
+        }
+
+        return new CooldownSnapshot
+        {
+            Charges = charges,
+            MaximumCharges = cooldown.MaximumCharges,
+            RemainingSeconds = Math.Max(0f, remaining),
+            RechargeSeconds = recharge
+        };
     }
 
     private void RefreshBurstAnchorTracking()
