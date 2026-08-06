@@ -137,9 +137,15 @@ public sealed class PolicyStateInputDefinition
 
     public string Provider { get; set; } = string.Empty;
 
+    public string DisplayName { get; set; } = string.Empty;
+
     public double? Minimum { get; set; }
 
     public double? Maximum { get; set; }
+
+    public double? PoolingReserve { get; set; }
+
+    public bool TrackTransactions { get; set; } = true;
 
     public string Unit { get; set; } = string.Empty;
 }
@@ -195,6 +201,8 @@ public sealed class PolicyRuleDefinition
 
     public TrainingMistakeResponse MistakeResponse { get; set; } =
         TrainingMistakeResponse.KeepProgress;
+
+    public bool AllowBelowResourceReserve { get; set; }
 
     public bool Enabled { get; set; } = true;
 }
