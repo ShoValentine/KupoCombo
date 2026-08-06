@@ -46,14 +46,13 @@ public sealed class TrainingSession
 
     private static readonly TimeSpan PlanRefreshInterval =
         TimeSpan.FromMilliseconds(500);
-    private static readonly TimeSpan MpAttributionGracePeriod =
+    private static readonly TimeSpan ResourceAttributionGracePeriod =
         TimeSpan.FromMilliseconds(750);
 
-    private readonly Queue<PendingMpAction> pendingMpActions = new();
+    private readonly Dictionary<string, PendingResourceWindow>
+        pendingResourceWindows = new(StringComparer.OrdinalIgnoreCase);
     private bool hasReceivedLiveState;
     private DateTime nextPlanRefreshUtc = DateTime.MinValue;
-    private int pendingMpWindowBefore;
-    private DateTime pendingMpWindowStartedUtc = DateTime.MinValue;
 
     public ITrainingPolicy? Policy { get; private set; }
 
@@ -85,8 +84,8 @@ public sealed class TrainingSession
         CurrentForecast.FirstOrDefault()?.Phase
         ?? CurrentPlan.CurrentPhase;
 
-    public IReadOnlyList<MpTransaction> MpTransactions =>
-        Snapshot.MpTransactions;
+    public IReadOnlyList<ResourceTransaction> ResourceTransactions =>
+        Snapshot.ResourceTransactions;
 
     public bool IsActive =>
         State == TrainingSessionState.Armed ||
@@ -114,7 +113,7 @@ public sealed class TrainingSession
         LastExpectedActionId = 0;
         hasReceivedLiveState = false;
         nextPlanRefreshUtc = DateTime.MinValue;
-        ClearPendingMpActions();
+        ClearPendingResourceActions();
         CurrentPlan = PracticePlan.Empty;
         RecalculateDecision();
         State = CurrentDecision?.IsComplete == true
@@ -125,22 +124,40 @@ public sealed class TrainingSession
     public void ObserveAction(uint actionId)
     {
         if (!IsActive ||
-            Policy is not IPracticePlanPolicy planPolicy ||
-            !planPolicy.TracksMpAction(actionId, Snapshot))
+            Policy is not IPracticePlanPolicy planPolicy)
         {
             return;
         }
 
-        if (pendingMpActions.Count == 0)
-        {
-            pendingMpWindowBefore = Snapshot.GetGauge("mp");
-            pendingMpWindowStartedUtc = DateTime.UtcNow;
-        }
+        var expectedDeltas = planPolicy.GetExpectedResourceDeltas(
+            actionId,
+            Snapshot);
+        var observedAtUtc = DateTime.UtcNow;
 
-        pendingMpActions.Enqueue(
-            new PendingMpAction(
-                actionId,
-                planPolicy.GetExpectedMpDelta(actionId, Snapshot)));
+        foreach (var (resource, expectedDelta) in expectedDeltas)
+        {
+            if (expectedDelta == 0 ||
+                !planPolicy.TrackedResources.Contains(
+                    resource,
+                    StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!pendingResourceWindows.TryGetValue(
+                    resource,
+                    out var window))
+            {
+                window = new PendingResourceWindow(
+                    resource,
+                    Snapshot.GetGauge(resource),
+                    observedAtUtc);
+                pendingResourceWindows[resource] = window;
+            }
+
+            window.Actions.Add(
+                new PendingResourceAction(actionId, expectedDelta));
+        }
     }
 
     public void RefreshState(Action<TrainingState> refresh)
@@ -151,16 +168,30 @@ public sealed class TrainingSession
         }
 
         var hadLiveState = hasReceivedLiveState;
-        var mpBefore = Snapshot.GetGauge("mp");
-        refresh(Snapshot);
-        var mpAfter = Snapshot.GetGauge("mp");
+        var planPolicy = Policy as IPracticePlanPolicy;
+        var resourceBefore = planPolicy == null
+            ? new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            : CaptureResources(planPolicy.TrackedResources);
 
-        if (hadLiveState)
+        refresh(Snapshot);
+
+        if (hadLiveState && planPolicy != null)
         {
-            RecordMpObservation(
-                mpBefore,
-                mpAfter,
-                DateTime.UtcNow);
+            var observedAtUtc = DateTime.UtcNow;
+
+            foreach (var resource in planPolicy.TrackedResources)
+            {
+                var before = resourceBefore.TryGetValue(
+                    resource,
+                    out var value)
+                    ? value
+                    : 0;
+                RecordResourceObservation(
+                    resource,
+                    before,
+                    Snapshot.GetGauge(resource),
+                    observedAtUtc);
+            }
         }
 
         if (!hasReceivedLiveState)
@@ -185,7 +216,7 @@ public sealed class TrainingSession
 
     public void Stop()
     {
-        FlushPendingMpActions(Snapshot.GetGauge("mp"));
+        FlushPendingResourceActions();
         Policy = null;
         CurrentDecision = null;
         CurrentPlan = PracticePlan.Empty;
@@ -195,7 +226,7 @@ public sealed class TrainingSession
         LastExpectedActionId = 0;
         hasReceivedLiveState = false;
         nextPlanRefreshUtc = DateTime.MinValue;
-        ClearPendingMpActions();
+        ClearPendingResourceActions();
         State = TrainingSessionState.Stopped;
     }
 
@@ -313,6 +344,15 @@ public sealed class TrainingSession
         };
     }
 
+    private Dictionary<string, int> CaptureResources(
+        IEnumerable<string> resources)
+    {
+        return resources.ToDictionary(
+            resource => resource,
+            resource => Snapshot.GetGauge(resource),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
     private void AdvancePracticeTimeline(uint actionId)
     {
         var forecastDuration = CurrentForecast.FirstOrDefault()?.DurationSeconds
@@ -333,106 +373,103 @@ public sealed class TrainingSession
             Math.Clamp(elapsedSeconds, 0.5f, 10f));
     }
 
-    private void RecordMpObservation(
-        int mpBefore,
-        int mpAfter,
+    private void RecordResourceObservation(
+        string resource,
+        int before,
+        int after,
         DateTime observedAtUtc)
     {
-        var observedDelta = mpAfter - mpBefore;
+        var observedDelta = after - before;
 
-        if (pendingMpActions.Count == 0)
+        if (!pendingResourceWindows.TryGetValue(resource, out var window))
         {
-            RecordUnattributedMpMovement(mpBefore, mpAfter);
+            RecordUnattributedResourceMovement(resource, before, after);
             return;
         }
 
-        var expectedDelta = pendingMpActions.Sum(
-            action => action.ExpectedMpDelta);
-        var actionObservedDelta = mpAfter - pendingMpWindowBefore;
+        var expectedDelta = window.Actions.Sum(
+            action => action.ExpectedDelta);
+        var actionObservedDelta = after - window.Before;
         var signMatched =
             expectedDelta != 0 &&
             actionObservedDelta != 0 &&
             Math.Sign(expectedDelta) == Math.Sign(actionObservedDelta);
         var graceExpired =
-            observedAtUtc - pendingMpWindowStartedUtc >=
-            MpAttributionGracePeriod;
+            observedAtUtc - window.StartedAtUtc >=
+            ResourceAttributionGracePeriod;
 
         if (signMatched || graceExpired)
         {
-            RecordActionMpTransaction(
-                pendingMpActions.ToArray(),
-                pendingMpWindowBefore,
-                mpAfter);
-            ClearPendingMpActions();
+            RecordActionResourceTransaction(window, after);
+            pendingResourceWindows.Remove(resource);
             return;
         }
 
         if (observedDelta != 0)
         {
-            RecordUnattributedMpMovement(mpBefore, mpAfter);
-            pendingMpWindowBefore = mpAfter;
+            RecordUnattributedResourceMovement(resource, before, after);
+            window.Before = after;
         }
     }
 
-    private void RecordActionMpTransaction(
-        IReadOnlyList<PendingMpAction> actions,
-        int mpBefore,
-        int mpAfter)
+    private void RecordActionResourceTransaction(
+        PendingResourceWindow window,
+        int after)
     {
-        Snapshot.RecordMpTransaction(
-            new MpTransaction
+        Snapshot.RecordResourceTransaction(
+            new ResourceTransaction
             {
-                Kind = MpTransactionKind.ActionWindow,
-                ActionIds = actions
+                Kind = ResourceTransactionKind.ActionWindow,
+                Resource = window.Resource,
+                ActionIds = window.Actions
                     .Select(action => action.ActionId)
                     .ToArray(),
-                BeforeMp = mpBefore,
-                AfterMp = mpAfter,
-                ExpectedDelta = actions.Sum(action => action.ExpectedMpDelta)
+                Before = window.Before,
+                After = after,
+                ExpectedDelta = window.Actions.Sum(
+                    action => action.ExpectedDelta)
             });
     }
 
-    private void RecordUnattributedMpMovement(
-        int mpBefore,
-        int mpAfter)
+    private void RecordUnattributedResourceMovement(
+        string resource,
+        int before,
+        int after)
     {
-        var observedDelta = mpAfter - mpBefore;
+        var observedDelta = after - before;
 
         if (observedDelta == 0)
         {
             return;
         }
 
-        Snapshot.RecordMpTransaction(
-            new MpTransaction
+        Snapshot.RecordResourceTransaction(
+            new ResourceTransaction
             {
                 Kind = observedDelta > 0
-                    ? MpTransactionKind.PassiveRecovery
-                    : MpTransactionKind.Reconciliation,
-                BeforeMp = mpBefore,
-                AfterMp = mpAfter
+                    ? ResourceTransactionKind.UnattributedGain
+                    : ResourceTransactionKind.Reconciliation,
+                Resource = resource,
+                Before = before,
+                After = after
             });
     }
 
-    private void FlushPendingMpActions(int currentMp)
+    private void FlushPendingResourceActions()
     {
-        if (pendingMpActions.Count == 0)
+        foreach (var window in pendingResourceWindows.Values.ToArray())
         {
-            return;
+            RecordActionResourceTransaction(
+                window,
+                Snapshot.GetGauge(window.Resource));
         }
 
-        RecordActionMpTransaction(
-            pendingMpActions.ToArray(),
-            pendingMpWindowBefore,
-            currentMp);
-        ClearPendingMpActions();
+        ClearPendingResourceActions();
     }
 
-    private void ClearPendingMpActions()
+    private void ClearPendingResourceActions()
     {
-        pendingMpActions.Clear();
-        pendingMpWindowBefore = 0;
-        pendingMpWindowStartedUtc = DateTime.MinValue;
+        pendingResourceWindows.Clear();
     }
 
     private void RecalculateDecision()
@@ -713,8 +750,7 @@ public sealed class TrainingSession
             GcdActionId = step.GcdActionId,
             SuggestedActionIds = suggestedActionIds
                 ?? step.SuggestedActionIds,
-            ExpectedMpBefore = step.ExpectedMpBefore,
-            ExpectedMpAfter = step.ExpectedMpAfter,
+            ResourceProjections = step.ResourceProjections,
             Reason = step.Reason,
             SuggestionReason = step.SuggestionReason,
             Confidence = step.Confidence
@@ -745,7 +781,28 @@ public sealed class TrainingSession
         };
     }
 
-    private sealed record PendingMpAction(
+    private sealed class PendingResourceWindow
+    {
+        public PendingResourceWindow(
+            string resource,
+            int before,
+            DateTime startedAtUtc)
+        {
+            Resource = resource;
+            Before = before;
+            StartedAtUtc = startedAtUtc;
+        }
+
+        public string Resource { get; }
+
+        public int Before { get; set; }
+
+        public DateTime StartedAtUtc { get; }
+
+        public List<PendingResourceAction> Actions { get; } = new();
+    }
+
+    private sealed record PendingResourceAction(
         uint ActionId,
-        int ExpectedMpDelta);
+        int ExpectedDelta);
 }
