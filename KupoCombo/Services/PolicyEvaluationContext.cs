@@ -15,6 +15,7 @@ internal sealed class PolicyEvaluationContext
 
     public PolicyEvaluationContext(RulePolicyDefinition definition)
     {
+        BurstResourceTargetLoader.Apply(definition);
         ValidateResourceDefinitions(definition);
 
         Definition = definition;
