@@ -73,22 +73,33 @@ internal static class MachinistStartupSmokeTests
     private static void ValidateContradictoryLiveAdjustment(
         RulePolicyDefinition definition)
     {
-        var session = new TrainingSession();
-        session.Start(new RuleSetTrainingPolicy(definition), 100);
-        session.RefreshState(state =>
-        {
-            state.SetLevel(100);
-            state.SetGauge("heat", 0);
-            state.SetGauge("battery", 0);
-            state.SetStateValue("overheated", 0d);
-            state.SetStateValue("overheat_ms", 0d);
-            state.SetStateValue("robot_active", 0d);
-            state.SetStateValue("summon_ms", 0d);
-            state.SetAdjustedAction(SplitShot, SplitShot);
-        });
+        var policy = new RuleSetTrainingPolicy(definition);
+        var unknownState = new TrainingState();
+        unknownState.Begin("MCH", 100);
+        unknownState.SetGauge("heat", 0);
+        unknownState.SetGauge("battery", 0);
+        var plannedBeforeLiveState = policy.BuildPracticePlan(unknownState);
 
-        if (!session.IsFaulted ||
-            !session.LastRejectedPlanValidation.Issues.Any(issue =>
+        if (plannedBeforeLiveState.Steps.FirstOrDefault()?.GcdActionId !=
+            HeatedSplitShot)
+        {
+            throw new InvalidDataException(
+                "The MCH startup fixture did not produce the expected Heated Split head.");
+        }
+
+        var contradictoryLiveState = unknownState.Clone();
+        contradictoryLiveState.SetAdjustedAction(SplitShot, SplitShot);
+
+        var validation = new PracticePlanValidator().Validate(
+            new PlanValidationRequest
+            {
+                Plan = plannedBeforeLiveState,
+                State = contradictoryLiveState
+            },
+            policy);
+
+        if (validation.IsValid ||
+            !validation.Issues.Any(issue =>
                 issue.Code == PlanValidationCode.AdjustedActionMismatch))
         {
             throw new InvalidDataException(
