@@ -11,7 +11,7 @@
         "maximumTargetCount": 1,
         "assumesContinuousUptime": true,
         "burstCycleSeconds": 120,
-        "notes": "Level-100 single-target continuous-uptime fundamentals. Teaches tool cooldowns, Overheat, Wildfire pairing, Heat and Battery overcap prevention, and charge hygiene. Encounter downtime and encounter-specific burst drift are outside this profile."
+        "notes": "Level-100 single-target continuous-uptime fundamentals. Teaches tool cooldowns, Overheat, Wildfire pairing, Heat and Battery overcap prevention, potency-aware Reassemble use, and charge hygiene. Encounter downtime and encounter-specific burst drift are outside this profile."
       },
       "actions": {
         "splitShot": {
@@ -72,21 +72,39 @@
           "lane": "gcd",
           "role": "graded",
           "minimumLevel": 76,
-          "adjustedFrom": "hotShot"
+          "adjustedFrom": "hotShot",
+          "forecastEffects": [
+            {
+              "type": "removeStatus",
+              "status": "reassembled"
+            }
+          ]
         },
         "drill": {
           "actionId": 16498,
           "displayName": "Drill",
           "lane": "gcd",
           "role": "graded",
-          "minimumLevel": 58
+          "minimumLevel": 58,
+          "forecastEffects": [
+            {
+              "type": "removeStatus",
+              "status": "reassembled"
+            }
+          ]
         },
         "chainSaw": {
           "actionId": 25788,
           "displayName": "Chain Saw",
           "lane": "gcd",
           "role": "graded",
-          "minimumLevel": 90
+          "minimumLevel": 90,
+          "forecastEffects": [
+            {
+              "type": "removeStatus",
+              "status": "reassembled"
+            }
+          ]
         },
         "excavator": {
           "actionId": 36981,
@@ -94,7 +112,13 @@
           "lane": "gcd",
           "role": "graded",
           "minimumLevel": 96,
-          "adjustedFrom": "chainSaw"
+          "adjustedFrom": "chainSaw",
+          "forecastEffects": [
+            {
+              "type": "removeStatus",
+              "status": "reassembled"
+            }
+          ]
         },
         "heatBlast": {
           "actionId": 7410,
@@ -109,7 +133,61 @@
           "lane": "gcd",
           "role": "graded",
           "minimumLevel": 68,
-          "adjustedFrom": "heatBlast"
+          "adjustedFrom": "heatBlast",
+          "forecastEffects": [
+            {
+              "type": "setStateValue",
+              "state": "overheated",
+              "value": 0,
+              "conditions": {
+                "all": [
+                  {
+                    "source": "stateValue",
+                    "key": "overheatShots",
+                    "operator": "equal",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            {
+              "type": "addStateValue",
+              "state": "overheatShots",
+              "value": -1,
+              "minimum": 0,
+              "conditions": {
+                "all": [
+                  {
+                    "source": "stateValue",
+                    "key": "overheatShots",
+                    "operator": "greaterThan",
+                    "value": 0
+                  }
+                ]
+              }
+            },
+            {
+              "type": "setStateValue",
+              "state": "overheated",
+              "value": 0,
+              "conditions": {
+                "all": [
+                  {
+                    "source": "stateValue",
+                    "key": "overheatShots",
+                    "operator": "equal",
+                    "value": 0
+                  },
+                  {
+                    "source": "stateValue",
+                    "key": "overheatMs",
+                    "operator": "lessThanOrEqual",
+                    "value": 1500
+                  }
+                ]
+              }
+            }
+          ]
         },
         "fullMetalField": {
           "actionId": 36982,
@@ -123,7 +201,14 @@
           "displayName": "Hypercharge",
           "lane": "weave",
           "role": "advisory",
-          "minimumLevel": 30
+          "minimumLevel": 30,
+          "forecastEffects": [
+            {
+              "type": "setStateValue",
+              "state": "overheatShots",
+              "value": 5
+            }
+          ]
         },
         "wildfire": {
           "actionId": 2878,
@@ -189,7 +274,11 @@
           "displayName": "Reassemble",
           "lane": "weave",
           "role": "advisory",
-          "minimumLevel": 10
+          "minimumLevel": 10,
+          "minimumNextGcdPotency": 660,
+          "excludedNextGcdActions": [
+            "fullMetalField"
+          ]
         }
       },
       "statuses": {
@@ -223,6 +312,14 @@
           "provider": "mch.overheat_ms",
           "minimum": 0,
           "unit": "milliseconds"
+        },
+        "overheatShots": {
+          "kind": "integer",
+          "provider": "forecast.mch_overheat_shots",
+          "minimum": 0,
+          "maximum": 5,
+          "trackTransactions": false,
+          "unit": "stacks"
         },
         "robotActive": {
           "kind": "boolean",
@@ -352,9 +449,17 @@
                 "operator": "greaterThan",
                 "value": 0
               }
+            ],
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
+              }
             ]
           },
-          "suggestionReason": "Use Barrel Stabilizer to prepare Full Metal Field and a free Hypercharge."
+          "suggestionReason": "Use Barrel Stabilizer outside Overheat to prepare Full Metal Field and a free Hypercharge."
         },
         {
           "id": "use-wildfire",
@@ -375,6 +480,12 @@
               {
                 "source": "statusActive",
                 "key": "wildfirePlayer",
+                "operator": "equal",
+                "value": true
+              },
+              {
+                "source": "stateValue",
+                "key": "overheated",
                 "operator": "equal",
                 "value": true
               }
@@ -461,10 +572,16 @@
                 "key": "robotActive",
                 "operator": "equal",
                 "value": true
+              },
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
               }
             ]
           },
-          "suggestionReason": "Deploy Automaton Queen before Battery overcaps."
+          "suggestionReason": "Deploy Automaton Queen before Battery overcaps, but keep the short Overheat windows clear."
         },
         {
           "id": "deploy-queen-before-air-anchor",
@@ -491,6 +608,12 @@
               {
                 "source": "stateValue",
                 "key": "robotActive",
+                "operator": "equal",
+                "value": true
+              },
+              {
+                "source": "stateValue",
+                "key": "overheated",
                 "operator": "equal",
                 "value": true
               }
@@ -525,10 +648,41 @@
                 "key": "robotActive",
                 "operator": "equal",
                 "value": true
+              },
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
               }
             ]
           },
           "suggestionReason": "Deploy Automaton Queen before Chain Saw adds Battery."
+        },
+        {
+          "id": "use-reassemble-on-high-potency",
+          "type": "useCooldown",
+          "lane": "weave",
+          "priority": 650,
+          "action": "reassemble",
+          "cooldown": "reassemble",
+          "conditions": {
+            "none": [
+              {
+                "source": "statusActive",
+                "key": "reassembled",
+                "operator": "equal",
+                "value": true
+              },
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          },
+          "suggestionReason": "Reserve Reassemble for Drill, Air Anchor, Chain Saw, or Excavator. Full Metal Field is already a critical direct hit and cannot consume it."
         },
         {
           "id": "prevent-double-check-charge-overcap",
@@ -549,26 +703,6 @@
           "cooldown": "checkmate",
           "threshold": 3,
           "suggestionReason": "Spend a Checkmate charge before all three remain capped."
-        },
-        {
-          "id": "prevent-reassemble-charge-overcap",
-          "type": "preventChargeOvercap",
-          "lane": "weave",
-          "priority": 600,
-          "action": "reassemble",
-          "cooldown": "reassemble",
-          "threshold": 2,
-          "conditions": {
-            "none": [
-              {
-                "source": "statusActive",
-                "key": "reassembled",
-                "operator": "equal",
-                "value": true
-              }
-            ]
-          },
-          "suggestionReason": "Spend a Reassemble charge before both charges remain capped."
         }
       ]
     }
