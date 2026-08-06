@@ -98,6 +98,11 @@
         "minimumLevel": { "type": "integer", "minimum": 1 },
         "maximumLevel": { "type": "integer", "minimum": 1 },
         "adjustedFrom": { "$ref": "#/$defs/alias" },
+        "minimumNextGcdPotency": { "type": "integer", "minimum": 0 },
+        "excludedNextGcdActions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/alias" }
+        },
         "overrideCatalogueForecastEffects": { "type": "boolean", "default": false },
         "forecastEffects": {
           "type": "array",
@@ -117,7 +122,8 @@
             "addStatus",
             "removeStatus",
             "setAdjustedAction",
-            "resetAdjustedAction"
+            "resetAdjustedAction",
+            "reduceCooldown"
           ]
         },
         "state": { "$ref": "#/$defs/alias" },
@@ -179,6 +185,7 @@
             "statusRemainingSeconds",
             "cooldownReady",
             "cooldownCharges",
+            "cooldownRemainingSeconds",
             "comboAction",
             "comboRemainingSeconds",
             "adjustedAction",
