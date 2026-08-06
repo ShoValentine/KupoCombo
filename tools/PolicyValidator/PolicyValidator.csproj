@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\KupoCombo\Models\ActionObservation.cs"
+             Link="Models\ActionObservation.cs" />
+    <Compile Include="..\..\KupoCombo\Models\ActionResolution.cs"
+             Link="Models\ActionResolution.cs" />
     <Compile Include="..\..\KupoCombo\Models\BurstTimelineProfileRegistry.cs"
              Link="Models\BurstTimelineProfileRegistry.cs" />
     <Compile Include="..\..\KupoCombo\Models\PracticePlan.cs"
@@ -23,6 +27,8 @@
              Link="Models\TrainingForecastStep.cs" />
     <Compile Include="..\..\KupoCombo\Models\TrainingState.cs"
              Link="Models\TrainingState.cs" />
+    <Compile Include="..\..\KupoCombo\Services\ActionResolutionPipeline.cs"
+             Link="Services\ActionResolutionPipeline.cs" />
     <Compile Include="..\..\KupoCombo\Services\BurstResourceTargetLoader.cs"
              Link="Services\BurstResourceTargetLoader.cs" />
     <Compile Include="..\..\KupoCombo\Services\IPracticePlanPolicy.cs"
