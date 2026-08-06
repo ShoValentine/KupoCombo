@@ -18,13 +18,23 @@ public sealed class TrainingForecastStep
     public IReadOnlyList<uint> SuggestedActionIds { get; init; } =
         Array.Empty<uint>();
 
-    public int ExpectedMpBefore { get; init; }
-
-    public int ExpectedMpAfter { get; init; }
+    public IReadOnlyDictionary<string, ResourceProjection> ResourceProjections
+    {
+        get;
+        init;
+    } = new Dictionary<string, ResourceProjection>(
+        StringComparer.OrdinalIgnoreCase);
 
     public string Reason { get; init; } = string.Empty;
 
     public string SuggestionReason { get; init; } = string.Empty;
 
     public float Confidence { get; init; } = 1f;
+
+    public ResourceProjection? GetResourceProjection(string resource)
+    {
+        return ResourceProjections.TryGetValue(resource, out var projection)
+            ? projection
+            : null;
+    }
 }
