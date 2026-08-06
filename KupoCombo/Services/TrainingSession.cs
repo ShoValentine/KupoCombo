@@ -10,7 +10,8 @@ public enum TrainingSessionState
     Stopped,
     Armed,
     Running,
-    Complete
+    Complete,
+    Faulted
 }
 
 public enum TrainingActionOutcome
@@ -55,6 +56,8 @@ public sealed class TrainingSession
     private readonly Dictionary<string, PendingResourceWindow>
         pendingResourceWindows = new(StringComparer.OrdinalIgnoreCase);
     private readonly RecoveryPlanEngine recoveryPlanEngine = new();
+    private readonly PracticePlanValidator practicePlanValidator = new();
+    private readonly RecoveryPlanValidator recoveryPlanValidator = new();
 
     private PendingRecoveryContext? pendingRecovery;
     private int recoveryStepsRemaining;
@@ -74,6 +77,15 @@ public sealed class TrainingSession
 
     public RecoveryPlan CurrentRecoveryPlan { get; private set; } =
         RecoveryPlan.Empty;
+
+    public PlanValidationResult CurrentPlanValidation { get; private set; } =
+        PlanValidationResult.NotRun;
+
+    public PlanValidationResult CurrentRecoveryValidation { get; private set; } =
+        PlanValidationResult.NotRun;
+
+    public PlanValidationResult LastRejectedPlanValidation { get; private set; } =
+        PlanValidationResult.NotRun;
 
     public IReadOnlyList<TrainingForecastStep> CurrentForecast
     {
@@ -104,6 +116,9 @@ public sealed class TrainingSession
     public bool IsComplete =>
         State == TrainingSessionState.Complete;
 
+    public bool IsFaulted =>
+        State == TrainingSessionState.Faulted;
+
     public bool IsEndless =>
         Policy != null && !Policy.ExpectedLength.HasValue;
 
@@ -133,11 +148,16 @@ public sealed class TrainingSession
         nextPlanRefreshUtc = DateTime.MinValue;
         ClearPendingResourceActions();
         ResetRecoveryState();
+        ResetValidationState();
         CurrentPlan = PracticePlan.Empty;
         RecalculateDecision();
-        State = CurrentDecision?.IsComplete == true
-            ? TrainingSessionState.Complete
-            : TrainingSessionState.Armed;
+
+        if (!IsFaulted)
+        {
+            State = CurrentDecision?.IsComplete == true
+                ? TrainingSessionState.Complete
+                : TrainingSessionState.Armed;
+        }
     }
 
     public void ObserveAction(uint actionId)
@@ -231,7 +251,7 @@ public sealed class TrainingSession
             RecalculateDecision();
         }
 
-        if (CurrentDecision?.IsComplete == true)
+        if (!IsFaulted && CurrentDecision?.IsComplete == true)
         {
             State = TrainingSessionState.Complete;
         }
@@ -251,6 +271,7 @@ public sealed class TrainingSession
         nextPlanRefreshUtc = DateTime.MinValue;
         ClearPendingResourceActions();
         ResetRecoveryState();
+        ResetValidationState();
         State = TrainingSessionState.Stopped;
     }
 
@@ -365,7 +386,7 @@ public sealed class TrainingSession
             RecalculateDecision();
         }
 
-        if (CurrentDecision?.IsComplete == true)
+        if (!IsFaulted && CurrentDecision?.IsComplete == true)
         {
             State = TrainingSessionState.Complete;
 
@@ -450,6 +471,7 @@ public sealed class TrainingSession
             expectedActionId,
             RecoverySettlingRefreshCount);
         CurrentRecoveryPlan = RecoveryPlan.Empty;
+        CurrentRecoveryValidation = PlanValidationResult.NotRun;
         recoveryStepsRemaining = 0;
 
         // Keep the committed route motionless while the action's live gauge,
@@ -492,7 +514,13 @@ public sealed class TrainingSession
             ? PracticePlan.Empty
             : ReindexPlan(planPolicy.BuildPracticePlan(Snapshot));
 
-        CurrentRecoveryPlan = recoveryPlanEngine.Build(
+        if (!freshPlan.IsEmpty &&
+            !TryValidatePlan(freshPlan, faultOnFailure: true))
+        {
+            return;
+        }
+
+        var candidateRecovery = recoveryPlanEngine.Build(
             new RecoveryPlanRequest
             {
                 OriginalPlan = recovery.OriginalPlan,
@@ -502,7 +530,18 @@ public sealed class TrainingSession
                 MinimumConvergenceSteps = RecoveryConvergenceStepCount,
                 MaximumRecoverySteps = MaximumRecoveryStepCount
             });
+        CurrentRecoveryValidation = recoveryPlanValidator.Validate(
+            candidateRecovery,
+            recovery.OriginalPlan);
 
+        if (!CurrentRecoveryValidation.IsValid)
+        {
+            LastRejectedPlanValidation = CurrentRecoveryValidation;
+            RejectInvalidPlan(CurrentRecoveryValidation);
+            return;
+        }
+
+        CurrentRecoveryPlan = candidateRecovery;
         recoveryStepsRemaining = CurrentRecoveryPlan.Disposition ==
             RecoveryPlanDisposition.GuidedRecovery
             ? CurrentRecoveryPlan.RecoverySteps.Count
@@ -595,6 +634,7 @@ public sealed class TrainingSession
     private void ClearResolvedRecoveryPlan()
     {
         CurrentRecoveryPlan = RecoveryPlan.Empty;
+        CurrentRecoveryValidation = PlanValidationResult.NotRun;
         recoveryStepsRemaining = 0;
     }
 
@@ -602,6 +642,58 @@ public sealed class TrainingSession
     {
         pendingRecovery = null;
         ClearResolvedRecoveryPlan();
+    }
+
+    private void ResetValidationState()
+    {
+        CurrentPlanValidation = PlanValidationResult.NotRun;
+        CurrentRecoveryValidation = PlanValidationResult.NotRun;
+        LastRejectedPlanValidation = PlanValidationResult.NotRun;
+    }
+
+    private bool TryValidatePlan(
+        PracticePlan plan,
+        PracticePlan? committedPlan = null,
+        int committedDepth = 0,
+        bool requireStateOriginMatch = true,
+        bool faultOnFailure = true)
+    {
+        var result = practicePlanValidator.Validate(
+            new PlanValidationRequest
+            {
+                Plan = plan,
+                State = Snapshot,
+                CommittedPlan = committedPlan,
+                CommittedDepth = committedDepth,
+                RequireStateOriginMatch = requireStateOriginMatch
+            },
+            Policy);
+
+        if (result.IsValid)
+        {
+            CurrentPlanValidation = result;
+            return true;
+        }
+
+        LastRejectedPlanValidation = result;
+
+        if (faultOnFailure)
+        {
+            RejectInvalidPlan(result);
+        }
+
+        return false;
+    }
+
+    private void RejectInvalidPlan(PlanValidationResult validation)
+    {
+        pendingRecovery = null;
+        CurrentRecoveryPlan = RecoveryPlan.Empty;
+        recoveryStepsRemaining = 0;
+        CurrentPlan = PracticePlan.Empty;
+        CurrentForecast = Array.Empty<TrainingForecastStep>();
+        CurrentDecision = TrainingDecision.Complete(validation.Summary);
+        State = TrainingSessionState.Faulted;
     }
 
     private void RecordResourceObservation(
@@ -719,13 +811,21 @@ public sealed class TrainingSession
         {
             CurrentPlan = PracticePlan.Empty;
             CurrentForecast = Array.Empty<TrainingForecastStep>();
+            CurrentPlanValidation = PlanValidationResult.NotRun;
             return;
         }
 
         if (Policy is IPracticePlanPolicy planPolicy)
         {
-            CurrentPlan = ReindexPlan(
+            var candidatePlan = ReindexPlan(
                 planPolicy.BuildPracticePlan(Snapshot));
+
+            if (!TryValidatePlan(candidatePlan, faultOnFailure: true))
+            {
+                return;
+            }
+
+            CurrentPlan = candidatePlan;
             CurrentForecast = CurrentPlan.Steps
                 .Take(ForecastViewportGcdCount)
                 .ToArray();
@@ -736,6 +836,7 @@ public sealed class TrainingSession
         if (Policy is ITrainingForecastPolicy forecastPolicy)
         {
             CurrentPlan = PracticePlan.Empty;
+            CurrentPlanValidation = PlanValidationResult.NotRun;
             CurrentForecast = Reindex(
                 forecastPolicy.Forecast(
                     Snapshot,
@@ -744,6 +845,7 @@ public sealed class TrainingSession
         }
 
         CurrentPlan = PracticePlan.Empty;
+        CurrentPlanValidation = PlanValidationResult.NotRun;
         CurrentForecast = Array.Empty<TrainingForecastStep>();
     }
 
@@ -769,6 +871,12 @@ public sealed class TrainingSession
         if (Policy is IPracticePlanPolicy planPolicy)
         {
             freshPlan = ReindexPlan(planPolicy.BuildPracticePlan(Snapshot));
+
+            if (!TryValidatePlan(freshPlan, faultOnFailure: true))
+            {
+                return;
+            }
+
             freshSteps = freshPlan.Steps;
             nextPlanRefreshUtc = DateTime.UtcNow + PlanRefreshInterval;
         }
@@ -820,7 +928,30 @@ public sealed class TrainingSession
 
         if (!freshPlan.IsEmpty)
         {
-            CurrentPlan = freshPlan.WithSteps(mergedSteps);
+            var committedPlan = !CurrentPlan.IsEmpty
+                ? CurrentPlan
+                : new PracticePlan
+                {
+                    Job = freshPlan.Job,
+                    StartsAtCombatTimeSeconds =
+                        freshPlan.StartsAtCombatTimeSeconds,
+                    HorizonSeconds = freshPlan.HorizonSeconds,
+                    TimingProfile = freshPlan.TimingProfile.Clone(),
+                    Steps = currentSteps
+                };
+            var mergedPlan = freshPlan.WithSteps(mergedSteps);
+
+            if (!TryValidatePlan(
+                    mergedPlan,
+                    committedPlan,
+                    committedDepth,
+                    requireStateOriginMatch: false,
+                    faultOnFailure: false))
+            {
+                return;
+            }
+
+            CurrentPlan = mergedPlan;
             CurrentForecast = CurrentPlan.Steps
                 .Take(ForecastViewportGcdCount)
                 .ToArray();
