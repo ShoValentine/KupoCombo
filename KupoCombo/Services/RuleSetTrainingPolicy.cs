@@ -888,6 +888,12 @@ public sealed class RuleSetTrainingPolicy :
                         baseAction.ActionId,
                         baseAction.ActionId);
                     break;
+
+                case PolicyForecastEffectType.ReduceCooldown:
+                    state.ReduceCooldown(
+                        context.GetAction(effect.Action).ActionId,
+                        (float)Math.Max(0d, effect.Value));
+                    break;
             }
         }
     }
