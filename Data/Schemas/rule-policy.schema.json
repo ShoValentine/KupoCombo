@@ -4,20 +4,13 @@
   "title": "KupoCombo Rule Policy File",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schemaVersion",
-    "policies"
-  ],
+  "required": ["schemaVersion", "policies"],
   "properties": {
-    "schemaVersion": {
-      "const": 1
-    },
+    "schemaVersion": { "const": 1 },
     "policies": {
       "type": "array",
       "minItems": 1,
-      "items": {
-        "$ref": "#/$defs/policy"
-      }
+      "items": { "$ref": "#/$defs/policy" }
     }
   },
   "$defs": {
@@ -41,73 +34,37 @@
         "rules"
       ],
       "properties": {
-        "id": {
-          "$ref": "#/$defs/alias"
-        },
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "job": {
-          "type": "string",
-          "minLength": 2,
-          "maxLength": 4
-        },
-        "minimumLevel": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "maximumLevel": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "profile": {
-          "$ref": "#/$defs/profile"
-        },
+        "id": { "$ref": "#/$defs/alias" },
+        "name": { "type": "string", "minLength": 1 },
+        "job": { "type": "string", "minLength": 2, "maxLength": 4 },
+        "minimumLevel": { "type": "integer", "minimum": 1 },
+        "maximumLevel": { "type": "integer", "minimum": 1 },
+        "profile": { "$ref": "#/$defs/profile" },
         "actions": {
           "type": "object",
           "minProperties": 1,
-          "propertyNames": {
-            "$ref": "#/$defs/alias"
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/action"
-          }
+          "propertyNames": { "$ref": "#/$defs/alias" },
+          "additionalProperties": { "$ref": "#/$defs/action" }
         },
         "statuses": {
           "type": "object",
-          "propertyNames": {
-            "$ref": "#/$defs/alias"
-          },
-          "additionalProperties": {
-            "type": "integer",
-            "minimum": 1
-          }
+          "propertyNames": { "$ref": "#/$defs/alias" },
+          "additionalProperties": { "type": "integer", "minimum": 1 }
         },
         "stateInputs": {
           "type": "object",
-          "propertyNames": {
-            "$ref": "#/$defs/alias"
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/stateInput"
-          }
+          "propertyNames": { "$ref": "#/$defs/alias" },
+          "additionalProperties": { "$ref": "#/$defs/stateInput" }
         },
         "combos": {
           "type": "object",
-          "propertyNames": {
-            "$ref": "#/$defs/alias"
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/combo"
-          }
+          "propertyNames": { "$ref": "#/$defs/alias" },
+          "additionalProperties": { "$ref": "#/$defs/combo" }
         },
         "rules": {
           "type": "array",
           "minItems": 1,
-          "items": {
-            "$ref": "#/$defs/rule"
-          }
+          "items": { "$ref": "#/$defs/rule" }
         }
       }
     },
@@ -115,106 +72,43 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "minimumTargetCount": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 1
-        },
-        "maximumTargetCount": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 1
-        },
-        "assumesContinuousUptime": {
-          "type": "boolean",
-          "default": true
-        },
-        "burstCycleSeconds": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 120
-        },
-        "minorBurstCycleSeconds": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 60
-        },
-        "openerDurationSeconds": {
-          "type": "integer",
-          "minimum": 0,
-          "default": 25
-        },
-        "burstWindowSeconds": {
-          "type": "integer",
-          "minimum": 0,
-          "default": 20
-        },
-        "poolingWindowSeconds": {
-          "type": "integer",
-          "minimum": 0,
-          "default": 15
-        },
-        "notes": {
-          "type": "string"
-        }
+        "minimumTargetCount": { "type": "integer", "minimum": 1, "default": 1 },
+        "maximumTargetCount": { "type": "integer", "minimum": 1, "default": 1 },
+        "assumesContinuousUptime": { "type": "boolean", "default": true },
+        "burstCycleSeconds": { "type": "integer", "minimum": 1, "default": 120 },
+        "minorBurstCycleSeconds": { "type": "integer", "minimum": 1, "default": 60 },
+        "openerDurationSeconds": { "type": "integer", "minimum": 0, "default": 25 },
+        "burstWindowSeconds": { "type": "integer", "minimum": 0, "default": 20 },
+        "poolingWindowSeconds": { "type": "integer", "minimum": 0, "default": 15 },
+        "notes": { "type": "string" }
       }
     },
     "action": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "actionId",
-        "lane",
-        "minimumLevel"
-      ],
+      "required": ["actionId", "lane", "minimumLevel"],
       "properties": {
-        "actionId": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "displayName": {
-          "type": "string"
-        },
-        "lane": {
-          "$ref": "#/$defs/lane"
-        },
+        "actionId": { "type": "integer", "minimum": 1 },
+        "displayName": { "type": "string" },
+        "lane": { "$ref": "#/$defs/lane" },
         "role": {
-          "enum": [
-            "graded",
-            "advisory",
-            "observed"
-          ],
+          "enum": ["graded", "advisory", "observed"],
           "default": "graded"
         },
-        "minimumLevel": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "maximumLevel": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "adjustedFrom": {
-          "$ref": "#/$defs/alias"
-        },
-        "overrideCatalogueForecastEffects": {
-          "type": "boolean",
-          "default": false
-        },
+        "minimumLevel": { "type": "integer", "minimum": 1 },
+        "maximumLevel": { "type": "integer", "minimum": 1 },
+        "adjustedFrom": { "$ref": "#/$defs/alias" },
+        "overrideCatalogueForecastEffects": { "type": "boolean", "default": false },
         "forecastEffects": {
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/forecastEffect"
-          }
+          "items": { "$ref": "#/$defs/forecastEffect" }
         }
       }
     },
     "forecastEffect": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "type"
-      ],
+      "required": ["type"],
       "properties": {
         "type": {
           "enum": [
@@ -226,118 +120,55 @@
             "resetAdjustedAction"
           ]
         },
-        "state": {
-          "$ref": "#/$defs/alias"
-        },
-        "value": {
-          "type": "number"
-        },
-        "minimum": {
-          "type": "number"
-        },
-        "maximum": {
-          "type": "number"
-        },
-        "status": {
-          "$ref": "#/$defs/alias"
-        },
-        "durationSeconds": {
-          "type": "number",
-          "minimum": 0
-        },
-        "stacks": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 1
-        },
-        "action": {
-          "$ref": "#/$defs/alias"
-        },
-        "adjustedAction": {
-          "$ref": "#/$defs/alias"
-        },
-        "conditions": {
-          "$ref": "#/$defs/conditionSet"
-        }
+        "state": { "$ref": "#/$defs/alias" },
+        "value": { "type": "number" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "status": { "$ref": "#/$defs/alias" },
+        "durationSeconds": { "type": "number", "minimum": 0 },
+        "stacks": { "type": "integer", "minimum": 1, "default": 1 },
+        "action": { "$ref": "#/$defs/alias" },
+        "adjustedAction": { "$ref": "#/$defs/alias" },
+        "conditions": { "$ref": "#/$defs/conditionSet" }
       }
     },
     "stateInput": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "kind",
-        "provider"
-      ],
+      "required": ["kind", "provider"],
       "properties": {
         "kind": {
-          "enum": [
-            "integer",
-            "number",
-            "boolean",
-            "timer",
-            "resource"
-          ]
+          "enum": ["integer", "number", "boolean", "timer", "resource"]
         },
-        "provider": {
-          "type": "string",
-          "minLength": 1
-        },
-        "minimum": {
-          "type": "number"
-        },
-        "maximum": {
-          "type": "number"
-        },
-        "unit": {
-          "type": "string"
-        }
+        "provider": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "poolingReserve": { "type": "number" },
+        "trackTransactions": { "type": "boolean", "default": true },
+        "unit": { "type": "string" }
       }
     },
     "combo": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "steps",
-        "minimumLevel"
-      ],
+      "required": ["steps", "minimumLevel"],
       "properties": {
         "steps": {
           "type": "array",
           "minItems": 2,
-          "items": {
-            "$ref": "#/$defs/alias"
-          }
+          "items": { "$ref": "#/$defs/alias" }
         },
-        "minimumLevel": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "breaksOnOtherGcd": {
-          "type": "boolean",
-          "default": true
-        }
+        "minimumLevel": { "type": "integer", "minimum": 1 },
+        "breaksOnOtherGcd": { "type": "boolean", "default": true }
       }
     },
-    "lane": {
-      "enum": [
-        "gcd",
-        "weave"
-      ]
-    },
-    "mistakeResponse": {
-      "enum": [
-        "resetProgress",
-        "keepProgress"
-      ]
-    },
+    "lane": { "enum": ["gcd", "weave"] },
+    "mistakeResponse": { "enum": ["resetProgress", "keepProgress"] },
     "condition": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "source",
-        "operator",
-        "value"
-      ],
+      "required": ["source", "operator", "value"],
       "properties": {
         "source": {
           "enum": [
@@ -357,9 +188,7 @@
             "lastAction"
           ]
         },
-        "key": {
-          "$ref": "#/$defs/alias"
-        },
+        "key": { "$ref": "#/$defs/alias" },
         "operator": {
           "enum": [
             "equal",
@@ -377,39 +206,17 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "all": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/condition"
-          }
-        },
-        "any": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/condition"
-          }
-        },
-        "none": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/condition"
-          }
-        }
+        "all": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
+        "any": { "type": "array", "items": { "$ref": "#/$defs/condition" } },
+        "none": { "type": "array", "items": { "$ref": "#/$defs/condition" } }
       }
     },
     "ruleBase": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "type",
-        "lane",
-        "priority"
-      ],
+      "required": ["id", "type", "lane", "priority"],
       "properties": {
-        "id": {
-          "$ref": "#/$defs/alias"
-        },
+        "id": { "$ref": "#/$defs/alias" },
         "type": {
           "enum": [
             "continueCombo",
@@ -423,208 +230,75 @@
             "useAction"
           ]
         },
-        "lane": {
-          "$ref": "#/$defs/lane"
-        },
-        "priority": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "action": {
-          "$ref": "#/$defs/alias"
-        },
+        "lane": { "$ref": "#/$defs/lane" },
+        "priority": { "type": "integer", "minimum": 0 },
+        "action": { "$ref": "#/$defs/alias" },
         "acceptableActions": {
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/alias"
-          }
+          "items": { "$ref": "#/$defs/alias" }
         },
-        "combo": {
-          "$ref": "#/$defs/alias"
-        },
-        "resource": {
-          "$ref": "#/$defs/alias"
-        },
-        "status": {
-          "$ref": "#/$defs/alias"
-        },
-        "cooldown": {
-          "$ref": "#/$defs/alias"
-        },
-        "incomingAction": {
-          "$ref": "#/$defs/alias"
-        },
-        "threshold": {
-          "type": "number"
-        },
-        "incomingGain": {
-          "type": "number"
-        },
-        "minimumRemainingSeconds": {
-          "type": "number",
-          "minimum": 0
-        },
-        "minimumCharges": {
-          "type": "integer",
-          "minimum": 0
-        },
+        "combo": { "$ref": "#/$defs/alias" },
+        "resource": { "$ref": "#/$defs/alias" },
+        "status": { "$ref": "#/$defs/alias" },
+        "cooldown": { "$ref": "#/$defs/alias" },
+        "incomingAction": { "$ref": "#/$defs/alias" },
+        "threshold": { "type": "number" },
+        "incomingGain": { "type": "number" },
+        "minimumRemainingSeconds": { "type": "number", "minimum": 0 },
+        "minimumCharges": { "type": "integer", "minimum": 0 },
         "adjustedActions": {
           "type": "array",
-          "items": {
-            "$ref": "#/$defs/alias"
-          }
+          "items": { "$ref": "#/$defs/alias" }
         },
-        "conditions": {
-          "$ref": "#/$defs/conditionSet"
-        },
-        "reason": {
-          "type": "string"
-        },
-        "suggestionReason": {
-          "type": "string"
-        },
-        "mistakeResponse": {
-          "$ref": "#/$defs/mistakeResponse"
-        },
-        "enabled": {
-          "type": "boolean",
-          "default": true
-        }
+        "conditions": { "$ref": "#/$defs/conditionSet" },
+        "reason": { "type": "string" },
+        "suggestionReason": { "type": "string" },
+        "mistakeResponse": { "$ref": "#/$defs/mistakeResponse" },
+        "allowBelowResourceReserve": { "type": "boolean", "default": false },
+        "enabled": { "type": "boolean", "default": true }
       }
     },
     "rule": {
       "allOf": [
+        { "$ref": "#/$defs/ruleBase" },
         {
-          "$ref": "#/$defs/ruleBase"
+          "if": { "properties": { "type": { "const": "continueCombo" } } },
+          "then": { "required": ["combo"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "followAdjustedAction" } } },
+          "then": {
+            "required": ["action", "adjustedActions"],
+            "properties": { "adjustedActions": { "minItems": 1 } }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "preventResourceOvercap" } } },
+          "then": { "required": ["action", "resource", "threshold"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "preventChargeOvercap" } } },
+          "then": { "required": ["action", "cooldown", "threshold"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "maintainStatus" } } },
+          "then": { "required": ["action", "status", "minimumRemainingSeconds"] }
         },
         {
           "if": {
             "properties": {
-              "type": {
-                "const": "continueCombo"
-              }
+              "type": { "enum": ["spendStatusStacks", "followProc"] }
             }
           },
-          "then": {
-            "required": [
-              "combo"
-            ]
-          }
+          "then": { "required": ["action", "status"] }
         },
         {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "followAdjustedAction"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "action",
-              "adjustedActions"
-            ],
-            "properties": {
-              "adjustedActions": {
-                "minItems": 1
-              }
-            }
-          }
+          "if": { "properties": { "type": { "const": "useCooldown" } } },
+          "then": { "required": ["action", "cooldown"] }
         },
         {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "preventResourceOvercap"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "action",
-              "resource",
-              "threshold"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "preventChargeOvercap"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "action",
-              "cooldown",
-              "threshold"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "maintainStatus"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "action",
-              "status",
-              "minimumRemainingSeconds"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "enum": [
-                  "spendStatusStacks",
-                  "followProc"
-                ]
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "action",
-              "status"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "useCooldown"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "action",
-              "cooldown"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": {
-                "const": "useAction"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "action"
-            ]
-          }
+          "if": { "properties": { "type": { "const": "useAction" } } },
+          "then": { "required": ["action"] }
         }
       ]
     }
