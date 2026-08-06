@@ -292,6 +292,7 @@ public enum PolicyConditionSource
     StatusRemainingSeconds,
     CooldownReady,
     CooldownCharges,
+    CooldownRemainingSeconds,
     ComboAction,
     ComboRemainingSeconds,
     AdjustedAction,
