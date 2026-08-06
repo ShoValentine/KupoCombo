@@ -78,6 +78,8 @@ internal static class RulePolicyRuntimeLoader
             ?? throw new InvalidOperationException(
                 "Could not determine the KupoCombo plugin directory.");
 
+        BurstResourceTargetLoader.ConfigurePluginDirectory(pluginDirectory);
+
         var directory = new DirectoryInfo(pluginDirectory);
 
         for (var level = 0; level < 6 && directory != null; level++)
