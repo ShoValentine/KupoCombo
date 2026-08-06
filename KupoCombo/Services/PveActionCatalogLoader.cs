@@ -209,6 +209,22 @@ public static class PveActionCatalogLoader
                         actionAlias,
                         "reset action");
                     break;
+
+                case PolicyForecastEffectType.ReduceCooldown:
+                    RequireKey(
+                        policy.Actions.Keys,
+                        effect.Action,
+                        policy,
+                        actionAlias,
+                        "cooldown action");
+
+                    if (effect.Value <= 0d)
+                    {
+                        throw new InvalidDataException(
+                            $"A cooldown-reduction effect for action '{actionAlias}' " +
+                            $"in policy '{policy.Id}' must reduce by a positive duration.");
+                    }
+                    break;
             }
 
             ValidateEffectConditions(
