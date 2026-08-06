@@ -1,0 +1,653 @@
+{
+  "schemaVersion": 1,
+  "gameVersion": "7.55",
+  "generatedFrom": "FFXIV game sheets exported by xivapi/ffxiv-datamining at c142b1269a76e9e3fffc42f984a5f193ba565ddc. Filter: non-PvP job-assigned player, proc, transformed, and limit-break actions in combat categories.",
+  "actions": [
+    {
+      "actionId": 3617,
+      "name": "Hard Slash",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 1,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "potency": 300
+    },
+    {
+      "actionId": 3621,
+      "name": "Unleash",
+      "job": "DRK",
+      "kind": "spell",
+      "minimumLevel": 6,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 3623,
+      "name": "Syphon Strike",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 2,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "comboFromActionId": 3617,
+      "potency": 240,
+      "comboPotency": 380,
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "mp",
+          "value": 600
+        }
+      ]
+    },
+    {
+      "actionId": 3624,
+      "name": "Unmend",
+      "job": "DRK",
+      "kind": "spell",
+      "minimumLevel": 15,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "potency": 150
+    },
+    {
+      "actionId": 3625,
+      "name": "Blood Weapon",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 35,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 3629,
+      "name": "Grit",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 10,
+      "castSeconds": 0,
+      "recastSeconds": 2,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 3632,
+      "name": "Souleater",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 26,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "comboFromActionId": 3623,
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "blood",
+          "value": 20,
+          "maximum": 100
+        }
+      ]
+    },
+    {
+      "actionId": 3634,
+      "name": "Dark Mind",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 45,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 3636,
+      "name": "Shadow Wall",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 38,
+      "castSeconds": 0,
+      "recastSeconds": 120,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 3638,
+      "name": "Living Dead",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 50,
+      "castSeconds": 0,
+      "recastSeconds": 300,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 3639,
+      "name": "Salted Earth",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 52,
+      "castSeconds": 0,
+      "recastSeconds": 90,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "mp",
+          "value": 600,
+          "maximum": 10000
+        }
+      ]
+    },
+    {
+      "actionId": 3641,
+      "name": "Abyssal Drain",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 56,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 3643,
+      "name": "Carve and Spit",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 60,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "saltedEarth",
+          "adjustedAction": "saltAndDarkness"
+        }
+      ]
+    },
+    {
+      "actionId": 7390,
+      "name": "Delirium",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 68,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "bloodspiller",
+          "adjustedAction": "scarletDelirium"
+        },
+        {
+          "type": "addStatus",
+          "status": "delirium",
+          "durationSeconds": 15,
+          "stacks": 3
+        }
+      ]
+    },
+    {
+      "actionId": 7391,
+      "name": "Quietus",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 64,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 7392,
+      "name": "Bloodspiller",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 62,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "blood",
+          "value": -50,
+          "minimum": 0
+        }
+      ]
+    },
+    {
+      "actionId": 7393,
+      "name": "The Blackest Night",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 70,
+      "castSeconds": 0,
+      "recastSeconds": 15,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "mpCost": 30
+    },
+    {
+      "actionId": 7531,
+      "name": "Rampart",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 8,
+      "castSeconds": 0,
+      "recastSeconds": 90,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 7533,
+      "name": "Provoke",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 15,
+      "castSeconds": 0,
+      "recastSeconds": 30,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 7535,
+      "name": "Reprisal",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 22,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 7537,
+      "name": "Shirk",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 48,
+      "castSeconds": 0,
+      "recastSeconds": 120,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 7538,
+      "name": "Interject",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 18,
+      "castSeconds": 0,
+      "recastSeconds": 30,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 7540,
+      "name": "Low Blow",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 12,
+      "castSeconds": 0,
+      "recastSeconds": 25,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 7548,
+      "name": "Arm's Length",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 32,
+      "castSeconds": 0,
+      "recastSeconds": 120,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 16466,
+      "name": "Flood of Darkness",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 30,
+      "castSeconds": 0,
+      "recastSeconds": 1,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "mpCost": 30
+    },
+    {
+      "actionId": 16467,
+      "name": "Edge of Darkness",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 40,
+      "castSeconds": 0,
+      "recastSeconds": 1,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "mpCost": 3000
+    },
+    {
+      "actionId": 16468,
+      "name": "Stalwart Soul",
+      "job": "DRK",
+      "kind": "spell",
+      "minimumLevel": 40,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "comboFromActionId": 3621
+    },
+    {
+      "actionId": 16469,
+      "name": "Flood of Shadow",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 74,
+      "castSeconds": 0,
+      "recastSeconds": 1,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "mpCost": 30
+    },
+    {
+      "actionId": 16470,
+      "name": "Edge of Shadow",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 74,
+      "castSeconds": 0,
+      "recastSeconds": 1,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "mpCost": 3000,
+      "adjustedFromActionId": 16467,
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "mp",
+          "value": -3000,
+          "minimum": 0
+        },
+        {
+          "type": "addStateValue",
+          "state": "darksideMs",
+          "value": 30000,
+          "maximum": 60000
+        }
+      ]
+    },
+    {
+      "actionId": 16471,
+      "name": "Dark Missionary",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 66,
+      "castSeconds": 0,
+      "recastSeconds": 90,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 16472,
+      "name": "Living Shadow",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 80,
+      "castSeconds": 0,
+      "recastSeconds": 120,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "livingShadow",
+          "adjustedAction": "disesteem"
+        }
+      ]
+    },
+    {
+      "actionId": 25754,
+      "name": "Oblation",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 82,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 2,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 25755,
+      "name": "Salt and Darkness",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 86,
+      "castSeconds": 0,
+      "recastSeconds": 20,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "potency": 500,
+      "adjustedFromActionId": 3643,
+      "forecastEffects": [
+        {
+          "type": "resetAdjustedAction",
+          "action": "saltedEarth"
+        }
+      ]
+    },
+    {
+      "actionId": 25756,
+      "name": "Salt and Darkness",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 86,
+      "castSeconds": 0,
+      "recastSeconds": 0,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 25757,
+      "name": "Shadowbringer",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 90,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 2,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "potency": 600
+    },
+    {
+      "actionId": 32067,
+      "name": "Release Grit",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 10,
+      "castSeconds": 0,
+      "recastSeconds": 1,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 36926,
+      "name": "Shadowstride",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 54,
+      "castSeconds": 0,
+      "recastSeconds": 30,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 2,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 36927,
+      "name": "Shadowed Vigil",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 92,
+      "castSeconds": 0,
+      "recastSeconds": 120,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 36928,
+      "name": "Scarlet Delirium",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 96,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "potency": 620,
+      "adjustedFromActionId": 7392,
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "bloodspiller",
+          "adjustedAction": "comeuppance"
+        }
+      ]
+    },
+    {
+      "actionId": 36929,
+      "name": "Comeuppance",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 96,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "comboFromActionId": 36928,
+      "potency": 720,
+      "adjustedFromActionId": 7392,
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "bloodspiller",
+          "adjustedAction": "torcleaver"
+        }
+      ]
+    },
+    {
+      "actionId": 36930,
+      "name": "Torcleaver",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 96,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "comboFromActionId": 36929,
+      "potency": 820,
+      "adjustedFromActionId": 7392,
+      "forecastEffects": [
+        {
+          "type": "resetAdjustedAction",
+          "action": "bloodspiller"
+        }
+      ]
+    },
+    {
+      "actionId": 36931,
+      "name": "Impalement",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 96,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "FFXIV 7.55 game data Action sheet; xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc"
+    },
+    {
+      "actionId": 36932,
+      "name": "Disesteem",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 100,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide; base metadata refreshed from xivapi/ffxiv-datamining@c142b1269a76e9e3fffc42f984a5f193ba565ddc",
+      "potency": 1000,
+      "adjustedFromActionId": 16472,
+      "forecastEffects": [
+        {
+          "type": "resetAdjustedAction",
+          "action": "livingShadow"
+        }
+      ]
+    }
+  ]
+}

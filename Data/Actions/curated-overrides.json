@@ -1,0 +1,748 @@
+{
+  "schemaVersion": 1,
+  "gameVersion": "7.5-level-100-baseline",
+  "generatedFrom": "Game/Lumina metadata with official FFXIV job guide verification and community-wiki cross-checks. Initial coverage contains actions used by the supported DRK and MCH training profiles.",
+  "actions": [
+    {
+      "actionId": 3624,
+      "name": "Unmend",
+      "job": "DRK",
+      "kind": "spell",
+      "minimumLevel": 15,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 150,
+      "source": "Official FFXIV Dark Knight job guide"
+    },
+    {
+      "actionId": 3617,
+      "name": "Hard Slash",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 1,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 300,
+      "source": "Official FFXIV Dark Knight job guide"
+    },
+    {
+      "actionId": 3623,
+      "name": "Syphon Strike",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 2,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 240,
+      "comboFromActionId": 3617,
+      "comboPotency": 380,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "mp",
+          "value": 600
+        }
+      ]
+    },
+    {
+      "actionId": 3632,
+      "name": "Souleater",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 26,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "comboFromActionId": 3623,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "blood",
+          "value": 20,
+          "maximum": 100
+        }
+      ]
+    },
+    {
+      "actionId": 16472,
+      "name": "Living Shadow",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 80,
+      "castSeconds": 0,
+      "recastSeconds": 120,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "livingShadow",
+          "adjustedAction": "disesteem"
+        }
+      ]
+    },
+    {
+      "actionId": 36932,
+      "name": "Disesteem",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 100,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 1000,
+      "adjustedFromActionId": 16472,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "resetAdjustedAction",
+          "action": "livingShadow"
+        }
+      ]
+    },
+    {
+      "actionId": 7390,
+      "name": "Delirium",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 68,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "bloodspiller",
+          "adjustedAction": "scarletDelirium"
+        },
+        {
+          "type": "addStatus",
+          "status": "delirium",
+          "durationSeconds": 15,
+          "stacks": 3
+        }
+      ]
+    },
+    {
+      "actionId": 7392,
+      "name": "Bloodspiller",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 62,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "blood",
+          "value": -50,
+          "minimum": 0
+        }
+      ]
+    },
+    {
+      "actionId": 36928,
+      "name": "Scarlet Delirium",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 96,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 620,
+      "adjustedFromActionId": 7392,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "bloodspiller",
+          "adjustedAction": "comeuppance"
+        }
+      ]
+    },
+    {
+      "actionId": 36929,
+      "name": "Comeuppance",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 96,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 720,
+      "comboFromActionId": 36928,
+      "adjustedFromActionId": 7392,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "bloodspiller",
+          "adjustedAction": "torcleaver"
+        }
+      ]
+    },
+    {
+      "actionId": 36930,
+      "name": "Torcleaver",
+      "job": "DRK",
+      "kind": "weaponskill",
+      "minimumLevel": 96,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 820,
+      "comboFromActionId": 36929,
+      "adjustedFromActionId": 7392,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "resetAdjustedAction",
+          "action": "bloodspiller"
+        }
+      ]
+    },
+    {
+      "actionId": 16467,
+      "name": "Edge of Darkness",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 40,
+      "castSeconds": 0,
+      "recastSeconds": 1,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "mpCost": 3000,
+      "source": "Official FFXIV Dark Knight job guide"
+    },
+    {
+      "actionId": 16470,
+      "name": "Edge of Shadow",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 74,
+      "castSeconds": 0,
+      "recastSeconds": 1,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "mpCost": 3000,
+      "adjustedFromActionId": 16467,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "mp",
+          "value": -3000,
+          "minimum": 0
+        },
+        {
+          "type": "addStateValue",
+          "state": "darksideMs",
+          "value": 30000,
+          "maximum": 60000
+        }
+      ]
+    },
+    {
+      "actionId": 3639,
+      "name": "Carve and Spit",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 60,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "mp",
+          "value": 600,
+          "maximum": 10000
+        }
+      ]
+    },
+    {
+      "actionId": 25757,
+      "name": "Shadowbringer",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 90,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 2,
+      "potency": 600,
+      "source": "Official FFXIV Dark Knight job guide"
+    },
+    {
+      "actionId": 3643,
+      "name": "Salted Earth",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 52,
+      "castSeconds": 0,
+      "recastSeconds": 90,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "setAdjustedAction",
+          "action": "saltedEarth",
+          "adjustedAction": "saltAndDarkness"
+        }
+      ]
+    },
+    {
+      "actionId": 25755,
+      "name": "Salt and Darkness",
+      "job": "DRK",
+      "kind": "ability",
+      "minimumLevel": 86,
+      "castSeconds": 0,
+      "recastSeconds": 20,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "potency": 500,
+      "adjustedFromActionId": 3643,
+      "source": "Official FFXIV Dark Knight job guide",
+      "forecastEffects": [
+        {
+          "type": "resetAdjustedAction",
+          "action": "saltedEarth"
+        }
+      ]
+    },
+
+    {
+      "actionId": 2866,
+      "name": "Split Shot",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 1,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 140,
+      "source": "Official FFXIV Machinist job guide"
+    },
+    {
+      "actionId": 2868,
+      "name": "Slug Shot",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 2,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 100,
+      "comboFromActionId": 2866,
+      "comboPotency": 210,
+      "source": "Official FFXIV Machinist job guide"
+    },
+    {
+      "actionId": 2873,
+      "name": "Clean Shot",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 26,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 100,
+      "comboFromActionId": 2868,
+      "comboPotency": 270,
+      "source": "Official FFXIV Machinist job guide"
+    },
+    {
+      "actionId": 7411,
+      "name": "Heated Split Shot",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 54,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 220,
+      "adjustedFromActionId": 2866,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "heat",
+          "value": 5,
+          "maximum": 100
+        }
+      ]
+    },
+    {
+      "actionId": 7412,
+      "name": "Heated Slug Shot",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 60,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 140,
+      "comboFromActionId": 7411,
+      "comboPotency": 320,
+      "adjustedFromActionId": 2868,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "heat",
+          "value": 5,
+          "maximum": 100
+        }
+      ]
+    },
+    {
+      "actionId": 7413,
+      "name": "Heated Clean Shot",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 64,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 160,
+      "comboFromActionId": 7412,
+      "comboPotency": 420,
+      "adjustedFromActionId": 2873,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "heat",
+          "value": 5,
+          "maximum": 100
+        },
+        {
+          "type": "addStateValue",
+          "state": "battery",
+          "value": 10,
+          "maximum": 100
+        }
+      ]
+    },
+    {
+      "actionId": 16500,
+      "name": "Air Anchor",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 76,
+      "castSeconds": 0,
+      "recastSeconds": 40,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 660,
+      "adjustedFromActionId": 2872,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "battery",
+          "value": 20,
+          "maximum": 100
+        }
+      ]
+    },
+    {
+      "actionId": 16498,
+      "name": "Drill",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 58,
+      "castSeconds": 0,
+      "recastSeconds": 20,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 2,
+      "potency": 660,
+      "source": "Official FFXIV Machinist job guide"
+    },
+    {
+      "actionId": 25788,
+      "name": "Chain Saw",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 90,
+      "castSeconds": 0,
+      "recastSeconds": 60,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 660,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "battery",
+          "value": 20,
+          "maximum": 100
+        },
+        {
+          "type": "setAdjustedAction",
+          "action": "chainSaw",
+          "adjustedAction": "excavator"
+        }
+      ]
+    },
+    {
+      "actionId": 36981,
+      "name": "Excavator",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 96,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 660,
+      "adjustedFromActionId": 25788,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "battery",
+          "value": 20,
+          "maximum": 100
+        },
+        {
+          "type": "resetAdjustedAction",
+          "action": "chainSaw"
+        }
+      ]
+    },
+    {
+      "actionId": 7410,
+      "name": "Heat Blast",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 35,
+      "castSeconds": 0,
+      "recastSeconds": 1.5,
+      "timelineLockSeconds": 1.5,
+      "maximumCharges": 1,
+      "potency": 200,
+      "source": "Official FFXIV Machinist job guide"
+    },
+    {
+      "actionId": 36978,
+      "name": "Blazing Shot",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 68,
+      "castSeconds": 0,
+      "recastSeconds": 1.5,
+      "timelineLockSeconds": 1.5,
+      "maximumCharges": 1,
+      "potency": 240,
+      "adjustedFromActionId": 7410,
+      "source": "Official FFXIV Machinist job guide"
+    },
+    {
+      "actionId": 36982,
+      "name": "Full Metal Field",
+      "job": "MCH",
+      "kind": "weaponskill",
+      "minimumLevel": 100,
+      "castSeconds": 0,
+      "recastSeconds": 2.5,
+      "timelineLockSeconds": 2.5,
+      "maximumCharges": 1,
+      "potency": 900,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "removeStatus",
+          "status": "fullMetalMachinist"
+        }
+      ]
+    },
+    {
+      "actionId": 17209,
+      "name": "Hypercharge",
+      "job": "MCH",
+      "kind": "ability",
+      "minimumLevel": 30,
+      "castSeconds": 0,
+      "recastSeconds": 10,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStateValue",
+          "state": "heat",
+          "value": -50,
+          "minimum": 0
+        },
+        {
+          "type": "setStateValue",
+          "state": "overheated",
+          "value": 1
+        },
+        {
+          "type": "setStateValue",
+          "state": "overheatMs",
+          "value": 10000
+        },
+        {
+          "type": "removeStatus",
+          "status": "hypercharged"
+        }
+      ]
+    },
+    {
+      "actionId": 2878,
+      "name": "Wildfire",
+      "job": "MCH",
+      "kind": "ability",
+      "minimumLevel": 45,
+      "castSeconds": 0,
+      "recastSeconds": 120,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStatus",
+          "status": "wildfirePlayer",
+          "durationSeconds": 10,
+          "stacks": 1
+        }
+      ]
+    },
+    {
+      "actionId": 7414,
+      "name": "Barrel Stabilizer",
+      "job": "MCH",
+      "kind": "ability",
+      "minimumLevel": 66,
+      "castSeconds": 0,
+      "recastSeconds": 120,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStatus",
+          "status": "hypercharged",
+          "durationSeconds": 30,
+          "stacks": 1
+        },
+        {
+          "type": "addStatus",
+          "status": "fullMetalMachinist",
+          "durationSeconds": 30,
+          "stacks": 1
+        }
+      ]
+    },
+    {
+      "actionId": 16501,
+      "name": "Automaton Queen",
+      "job": "MCH",
+      "kind": "ability",
+      "minimumLevel": 80,
+      "castSeconds": 0,
+      "recastSeconds": 6,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 1,
+      "adjustedFromActionId": 2864,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "setStateValue",
+          "state": "battery",
+          "value": 0
+        },
+        {
+          "type": "setStateValue",
+          "state": "robotActive",
+          "value": 1
+        },
+        {
+          "type": "setStateValue",
+          "state": "summonMs",
+          "value": 12000
+        }
+      ]
+    },
+    {
+      "actionId": 36979,
+      "name": "Double Check",
+      "job": "MCH",
+      "kind": "ability",
+      "minimumLevel": 92,
+      "castSeconds": 0,
+      "recastSeconds": 30,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 3,
+      "potency": 180,
+      "adjustedFromActionId": 2874,
+      "source": "Official FFXIV Machinist job guide"
+    },
+    {
+      "actionId": 36980,
+      "name": "Checkmate",
+      "job": "MCH",
+      "kind": "ability",
+      "minimumLevel": 92,
+      "castSeconds": 0,
+      "recastSeconds": 30,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 3,
+      "potency": 180,
+      "adjustedFromActionId": 2890,
+      "source": "Official FFXIV Machinist job guide"
+    },
+    {
+      "actionId": 2876,
+      "name": "Reassemble",
+      "job": "MCH",
+      "kind": "ability",
+      "minimumLevel": 10,
+      "castSeconds": 0,
+      "recastSeconds": 55,
+      "timelineLockSeconds": 0,
+      "maximumCharges": 2,
+      "source": "Official FFXIV Machinist job guide",
+      "forecastEffects": [
+        {
+          "type": "addStatus",
+          "status": "reassembled",
+          "durationSeconds": 5,
+          "stacks": 1
+        }
+      ]
+    }
+  ]
+}
