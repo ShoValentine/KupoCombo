@@ -57,6 +57,8 @@ public sealed class Plugin : IDalamudPlugin
     private static readonly TimeSpan StateRefreshInterval =
         TimeSpan.FromMilliseconds(100);
 
+    private readonly ActionResolutionPipeline actionResolutionPipeline = new();
+
     private string SequenceDirectory { get; }
 
     private string GuidanceDirectory { get; }
@@ -261,7 +263,12 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        OnActionUsed(preferredActionId);
+        var executedActionId =
+            TrainingSession.Snapshot.GetAdjustedAction(preferredActionId);
+
+        OnActionUsed(
+            executedActionId,
+            ActionObservationSource.Simulation);
     }
 
     public void ShowTestPrompt()
@@ -711,10 +718,36 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnActionUsed(uint actionId)
     {
+        OnActionUsed(
+            actionId,
+            ActionObservationSource.ClientExecution);
+    }
+
+    private void OnActionUsed(
+        uint actionId,
+        ActionObservationSource source)
+    {
         RefreshTrainingState();
 
-        var result = TrainingSession.ProcessAction(actionId);
+        var observation = source == ActionObservationSource.Simulation
+            ? ActionObservation.Simulated(actionId)
+            : ActionObservation.ClientExecution(actionId);
+        var resolution = actionResolutionPipeline.Resolve(
+            observation,
+            TrainingSession.CurrentDecision,
+            TrainingSession.Policy,
+            TrainingSession.Snapshot);
+        var result = TrainingSession.ProcessAction(
+            resolution.PolicyActionId);
         nextStateRefreshUtc = DateTime.MinValue;
+
+        if (resolution.Kind == ActionResolutionKind.ClientAdjusted)
+        {
+            Log.Debug(
+                $"Resolved executed action {resolution.ExecutedActionId} " +
+                $"to policy action {resolution.PolicyActionId} " +
+                $"as {resolution.Role}.");
+        }
 
         switch (result.Outcome)
         {
@@ -723,7 +756,7 @@ public sealed class Plugin : IDalamudPlugin
 
             case TrainingActionOutcome.Correct:
                 Log.Information(
-                    $"Correct action: {actionId}. Progress: " +
+                    $"Correct action: {resolution.ExecutedActionId}. Progress: " +
                     $"{CurrentStep}/{CurrentSequenceLength}");
 
                 ShowPrompt(GetStepGuidance(CurrentStep)?.Prompt);
@@ -731,13 +764,19 @@ public sealed class Plugin : IDalamudPlugin
 
             case TrainingActionOutcome.Acceptable:
                 Log.Information(
-                    $"Accepted alternative action: {actionId}. " +
+                    $"Accepted alternative action: {resolution.ExecutedActionId}. " +
                     $"Preferred: {result.ExpectedActionId}.");
+                return;
+
+            case TrainingActionOutcome.Suggested:
+                Log.Information(
+                    $"Observed suggested action: {resolution.ExecutedActionId}. " +
+                    $"Current GCD: {result.ExpectedActionId}.");
                 return;
 
             case TrainingActionOutcome.Incorrect:
                 Log.Warning(
-                    $"Incorrect action: {result.UsedActionId}. Expected: " +
+                    $"Incorrect action: {resolution.ExecutedActionId}. Expected: " +
                     $"{result.ExpectedActionId}. Recalculating training state.");
 
                 var mistakePrompt =
