@@ -64,14 +64,80 @@
       "ruleOverrides": [
         {
           "id": "prevent-heat-overcap",
-          "threshold": 100
+          "type": "useAction",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "heat",
+                "operator": "greaterThanOrEqual",
+                "value": 90
+              }
+            ],
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "overheated",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          }
         },
         {
           "id": "prevent-battery-overcap",
-          "threshold": 100
+          "type": "useAction",
+          "conditions": {
+            "all": [
+              {
+                "source": "stateValue",
+                "key": "battery",
+                "operator": "greaterThanOrEqual",
+                "value": 90
+              }
+            ],
+            "none": [
+              {
+                "source": "stateValue",
+                "key": "robotActive",
+                "operator": "equal",
+                "value": true
+              }
+            ]
+          }
         }
       ],
       "additionalRules": [
+        {
+          "id": "deploy-queen-after-air-anchor",
+          "type": "useAction",
+          "lane": "weave",
+          "priority": 760,
+          "action": "automatonQueen",
+          "allowBelowResourceReserve": true,
+          "conditions": {
+            "all": [
+              {
+                "source": "lastAction",
+                "operator": "equal",
+                "value": "airAnchor"
+              },
+              {
+                "source": "stateValue",
+                "key": "battery",
+                "operator": "greaterThanOrEqual",
+                "value": 100
+              },
+              {
+                "source": "stateValue",
+                "key": "robotActive",
+                "operator": "equal",
+                "value": false
+              }
+            ]
+          },
+          "suggestionReason": "Deploy the 100-Battery Queen immediately after the two-minute Air Anchor inside raid buffs."
+        },
         {
           "id": "deploy-queen-after-excavator",
           "type": "useAction",
