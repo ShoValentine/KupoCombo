@@ -37,9 +37,9 @@
       <Visible>false</Visible>
     </Content>
 
-    <Content Include="..\Data\Actions\*.json">
-      <Link>Actions\%(Filename)%(Extension)</Link>
-      <TargetPath>Actions\%(Filename)%(Extension)</TargetPath>
+    <Content Include="..\Data\Actions\**\*.json">
+      <Link>Actions\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <TargetPath>Actions\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
