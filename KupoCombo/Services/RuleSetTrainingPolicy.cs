@@ -206,14 +206,31 @@ public sealed class RuleSetTrainingPolicy :
         TrainingState state)
     {
         var appliedActionIds = new List<uint>();
+        var initialEvaluation = EvaluateCore(state);
 
-        for (var slot = 0;
-             slot < MaximumForecastWeavesPerWindow;
-             slot++)
+        if (initialEvaluation.GcdMatch == null)
+        {
+            return appliedActionIds;
+        }
+
+        var maximumWeaves = GetMaximumForecastWeaves(
+            state,
+            initialEvaluation.GcdMatch);
+
+        for (var slot = 0; slot < maximumWeaves; slot++)
         {
             var evaluation = EvaluateCore(state);
+
+            if (evaluation.GcdMatch == null)
+            {
+                break;
+            }
+
             var match = evaluation.WeaveMatches.FirstOrDefault(candidate =>
-                !appliedActionIds.Contains(candidate.ActionId));
+                !appliedActionIds.Contains(candidate.ActionId) &&
+                CanScheduleWeaveBeforeGcd(
+                    candidate,
+                    evaluation.GcdMatch));
 
             if (match == null)
             {
@@ -225,6 +242,45 @@ public sealed class RuleSetTrainingPolicy :
         }
 
         return appliedActionIds;
+    }
+
+    private int GetMaximumForecastWeaves(
+        TrainingState state,
+        RuleMatch gcdMatch)
+    {
+        var gcdSeconds = GetForecastElapsedSeconds(state, gcdMatch);
+
+        return gcdSeconds < 2f
+            ? 1
+            : MaximumForecastWeavesPerWindow;
+    }
+
+    private bool CanScheduleWeaveBeforeGcd(
+        RuleMatch weaveMatch,
+        RuleMatch gcdMatch)
+    {
+        var weaveAction = context.GetAction(weaveMatch.ActionAlias);
+
+        if (weaveAction.ExcludedNextGcdActions.Any(alias =>
+                alias.Equals(
+                    gcdMatch.ActionAlias,
+                    StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        if (!weaveAction.MinimumNextGcdPotency.HasValue)
+        {
+            return true;
+        }
+
+        var gcdAction = context.GetAction(gcdMatch.ActionAlias);
+        var effectivePotency = Math.Max(
+            gcdAction.Potency ?? 0,
+            gcdAction.ComboPotency ?? 0);
+
+        return effectivePotency >=
+            weaveAction.MinimumNextGcdPotency.Value;
     }
 
     private EvaluationResult EvaluateCore(TrainingState state)
