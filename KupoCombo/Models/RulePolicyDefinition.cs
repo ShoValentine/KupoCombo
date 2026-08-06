@@ -254,7 +254,8 @@ public enum PolicyForecastEffectType
     AddStatus,
     RemoveStatus,
     SetAdjustedAction,
-    ResetAdjustedAction
+    ResetAdjustedAction,
+    ReduceCooldown
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<PolicyStateValueKind>))]
