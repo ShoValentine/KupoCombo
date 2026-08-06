@@ -481,6 +481,7 @@ public static class RulePolicyLoader
 
                 case PolicyConditionSource.CooldownReady:
                 case PolicyConditionSource.CooldownCharges:
+                case PolicyConditionSource.CooldownRemainingSeconds:
                 case PolicyConditionSource.AdjustedAction:
                     RequireAction(policy, condition.Key, $"rule '{rule.Id}' condition key");
                     break;
