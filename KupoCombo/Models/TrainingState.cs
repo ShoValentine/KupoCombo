@@ -28,7 +28,7 @@ public sealed class StatusSnapshot
 
 public sealed class TrainingState
 {
-    private const int MaximumMpTransactions = 256;
+    private const int MaximumResourceTransactions = 256;
 
     private readonly List<uint> acceptedActionHistory = new();
     private readonly Dictionary<string, int> gauges =
@@ -39,7 +39,7 @@ public sealed class TrainingState
     private readonly Dictionary<uint, CooldownSnapshot> cooldowns = new();
     private readonly Dictionary<uint, uint> adjustedActions = new();
     private readonly Dictionary<uint, float> adjustedRecastSeconds = new();
-    private readonly List<MpTransaction> mpTransactions = new();
+    private readonly List<ResourceTransaction> resourceTransactions = new();
 
     public string Job { get; private set; } = string.Empty;
 
@@ -76,7 +76,8 @@ public sealed class TrainingState
     public IReadOnlyDictionary<uint, float> AdjustedRecastSeconds =>
         adjustedRecastSeconds;
 
-    public IReadOnlyList<MpTransaction> MpTransactions => mpTransactions;
+    public IReadOnlyList<ResourceTransaction> ResourceTransactions =>
+        resourceTransactions;
 
     public void SetLevel(int level)
     {
@@ -286,7 +287,7 @@ public sealed class TrainingState
             clone.adjustedRecastSeconds[item.Key] = item.Value;
         }
 
-        clone.mpTransactions.AddRange(mpTransactions);
+        clone.resourceTransactions.AddRange(resourceTransactions);
         return clone;
     }
 
@@ -308,7 +309,7 @@ public sealed class TrainingState
         cooldowns.Clear();
         adjustedActions.Clear();
         adjustedRecastSeconds.Clear();
-        mpTransactions.Clear();
+        resourceTransactions.Clear();
     }
 
     internal void RecordAcceptedAction(uint actionId)
@@ -328,15 +329,15 @@ public sealed class TrainingState
         LastObservedActionId = actionId;
     }
 
-    internal void RecordMpTransaction(MpTransaction transaction)
+    internal void RecordResourceTransaction(ResourceTransaction transaction)
     {
-        mpTransactions.Add(transaction);
+        resourceTransactions.Add(transaction);
 
-        if (mpTransactions.Count > MaximumMpTransactions)
+        if (resourceTransactions.Count > MaximumResourceTransactions)
         {
-            mpTransactions.RemoveRange(
+            resourceTransactions.RemoveRange(
                 0,
-                mpTransactions.Count - MaximumMpTransactions);
+                resourceTransactions.Count - MaximumResourceTransactions);
         }
     }
 
