@@ -6,5 +6,7 @@ public interface IPracticePlanPolicy
 {
     PracticePlan BuildPracticePlan(TrainingState state);
 
+    bool TracksMpAction(uint actionId, TrainingState state);
+
     int GetExpectedMpDelta(uint actionId, TrainingState state);
 }
