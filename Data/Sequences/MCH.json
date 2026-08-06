@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "sequences": [
     {
-      "id": "mch-basic-coming-soon",
-      "name": "Basic Rotation Coming Soon...",
+      "id": "mch-heated-combo",
+      "name": "Heated Combo",
       "job": "MCH",
-      "category": "WIP",
-      "minimumLevel": 0,
+      "category": "Single Target Combo",
+      "minimumLevel": 64,
       "actions": [
         7411,
         7412,
@@ -14,15 +14,51 @@
       ]
     },
     {
-      "id": "mch-opener-coming-soon",
-      "name": "Opener Coming Soon...",
+      "id": "mch-tool-alignment-icy-veins",
+      "name": "Tool Alignment - Icy Veins 7.55",
       "job": "MCH",
-      "category": "WIP",
-      "minimumLevel": 0,
+      "category": "Fundamental Alignment",
+      "minimumLevel": 100,
       "actions": [
-        7411,
-        7412,
-        7413
+        16500,
+        16498,
+        7414,
+        25788,
+        36981,
+        36982
+      ]
+    },
+    {
+      "id": "mch-standard-opener-dummy-icy-veins",
+      "name": "Standard Opener - Icy Veins Baseline",
+      "job": "MCH",
+      "category": "Opener",
+      "minimumLevel": 100,
+      "actions": [
+        2876,
+        16500,
+        2876,
+        36979,
+        16498,
+        7414,
+        36980,
+        25788,
+        36979,
+        36981,
+        16501,
+        36980,
+        36982,
+        2878,
+        17209,
+        36978,
+        36979,
+        36978,
+        36980,
+        36978,
+        36979,
+        36978,
+        36980,
+        36978
       ]
     }
   ]
