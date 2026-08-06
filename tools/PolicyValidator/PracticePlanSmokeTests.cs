@@ -130,7 +130,9 @@ internal static class PracticePlanSmokeTests
         if (Math.Abs(session.Snapshot.CombatTimeSeconds - 2.4d) > 0.001d)
         {
             throw new InvalidDataException(
-                "Live practice time did not advance by the player's adjusted GCD.");
+                "Live practice time did not advance by the player's adjusted GCD. " +
+                $"Session state: {session.State}. " +
+                $"Validation: {session.LastRejectedPlanValidation.Summary}");
         }
 
         session.RefreshState(state => state.SetGauge("mp", 6000));
