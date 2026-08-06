@@ -126,6 +126,11 @@ internal static class MachinistWeaveSchedulingSmokeTests
         state.SetStateValue("overheated", 1d);
         state.SetStateValue("overheat_ms", 10000d);
         state.SetStateValue("overheatShots", 5d);
+
+        // This deliberately violates the guide's pre-Hypercharge rule by
+        // entering Overheat with two charges of each skill. The ribbon must
+        // recover immediately without double weaving or wasting another
+        // reduction on whichever skill reaches three charges first.
         state.SetCooldown(
             DoubleCheck,
             UnreadyCooldown(10f, 30f, maximumCharges: 3, charges: 2));
