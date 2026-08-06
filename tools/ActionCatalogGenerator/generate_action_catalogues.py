@@ -75,7 +75,10 @@ def parse_args() -> argparse.Namespace:
         "--overrides",
         type=Path,
         default=None,
-        help="Optional curated override catalogue. Defaults to curated-overrides.json, then pve-actions.json.",
+        help=(
+            "Optional curated override catalogue. Defaults to "
+            "curated-overrides.json, then pve-actions.json."
+        ),
     )
     return parser.parse_args()
 
@@ -117,7 +120,10 @@ def compact_number(value: float) -> int | float:
     return int(rounded) if rounded.is_integer() else rounded
 
 
-def load_override_actions(output_root: Path, explicit: Path | None) -> dict[int, dict[str, Any]]:
+def load_override_actions(
+    output_root: Path,
+    explicit: Path | None,
+) -> dict[int, dict[str, Any]]:
     candidates = []
     if explicit is not None:
         candidates.append(explicit)
@@ -179,7 +185,6 @@ def build_entry(
         action_id <= 0
         or not name
         or kind is None
-        or not as_bool(row.get("IsPlayerAction"))
         or as_bool(row.get("IsPvP"))
         or (level < 1 and not is_limit_break)
     ):
@@ -191,6 +196,17 @@ def build_entry(
 
     jobs = available_jobs(category)
     if not jobs:
+        return None
+
+    # Adjusted and proc follow-ups are often deliberately hidden from the
+    # action list and therefore have IsPlayerAction=false. Keep hidden actions
+    # when the game still assigns them to a concrete combat job/category, or
+    # when KupoCombo already carries a curated override for the action ID.
+    category_name = (category.get("Name") or "").strip()
+    is_player_action = as_bool(row.get("IsPlayerAction"))
+    is_job_specific = category_name not in {"", "All Classes"}
+
+    if not is_player_action and not is_job_specific and action_id not in overrides:
         return None
 
     cast_seconds = as_int(row.get("Cast100ms")) / 10.0
@@ -209,7 +225,9 @@ def build_entry(
         "minimumLevel": max(1, level),
         "castSeconds": compact_number(cast_seconds),
         "recastSeconds": compact_number(recast_seconds),
-        "timelineLockSeconds": compact_number(timeline_lock(kind, recast_seconds)),
+        "timelineLockSeconds": compact_number(
+            timeline_lock(kind, recast_seconds)
+        ),
         "maximumCharges": maximum_charges,
         "source": (
             f"FFXIV {GAME_VERSION} game data Action sheet; "
@@ -250,8 +268,8 @@ def write_catalogue(
         "gameVersion": GAME_VERSION,
         "generatedFrom": (
             f"FFXIV game sheets exported by {SOURCE_REPOSITORY} at "
-            f"{SOURCE_COMMIT}. Filter: non-PvP player actions in spell, "
-            "weaponskill, ability, or limit-break categories."
+            f"{SOURCE_COMMIT}. Filter: non-PvP job-assigned player, proc, "
+            "transformed, and limit-break actions in combat categories."
         ),
         "actions": list(actions),
     }
