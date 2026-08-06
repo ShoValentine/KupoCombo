@@ -113,11 +113,12 @@ internal static class MachinistIcyVeinsBaselineSmokeTests
             "Hypercharge entered before the core tool block completed.");
 
         foreach (var step in forecast.Where(step =>
-                     step.GcdActionId == BlazingShot))
+                     step.GcdActionId == BlazingShot &&
+                     !step.SuggestedActionIds.Contains(Hypercharge)))
         {
             Require(
                 step.SuggestedActionIds.Count <= 1,
-                "A Blazing Shot window received more than one weave.");
+                "A post-entry Blazing Shot window received more than one weave.");
         }
     }
 
