@@ -64,9 +64,9 @@ internal static class FullDarkKnightOpenerSmokeTest
                 step.SuggestedActionIds.Concat(new[] { step.GcdActionId }))
             .ToArray();
 
-        // MP-restoring Delirium-chain effects are supplied by live state today
-        // and will be modelled by the full player-timing plan. This structural
-        // opener gate focuses on mandatory cooldown and transformed follow-ups.
+        // Resource restoration can fund additional Edge weaves without
+        // changing the mandatory opener spine. Require every defining action
+        // in order while allowing legitimate resource-dependent inserts.
         var expectedBurstStructure = new uint[]
         {
             Unmend,
@@ -89,28 +89,50 @@ internal static class FullDarkKnightOpenerSmokeTest
             SaltAndDarkness
         };
 
-        if (ribbon.Length < expectedBurstStructure.Length ||
-            !ribbon
-                .Take(expectedBurstStructure.Length)
-                .SequenceEqual(expectedBurstStructure))
+        if (!ContainsOrderedSubsequence(ribbon, expectedBurstStructure))
         {
             throw new InvalidDataException(
-                "DRK burst follow-up forecast diverged. Expected " +
-                $"[{string.Join(", ", expectedBurstStructure)}], got " +
+                "DRK burst follow-up forecast diverged. Required ordered " +
+                $"structure [{string.Join(", ", expectedBurstStructure)}], got " +
                 $"[{string.Join(", ", ribbon)}].");
         }
 
-        if (ribbon
-                .Take(expectedBurstStructure.Length)
+        var burstEndIndex = Array.IndexOf(ribbon, SaltAndDarkness);
+
+        if (burstEndIndex < 0 ||
+            ribbon
+                .Take(burstEndIndex + 1)
                 .Count(actionId => actionId == Shadowbringer) != 2)
         {
             throw new InvalidDataException(
-                "DRK opener forecast did not spend both Shadowbringer charges.");
+                "DRK opener forecast did not spend both Shadowbringer charges before Salt and Darkness.");
         }
 
         Console.WriteLine(
             "DRK burst follow-up forecast passed, including both " +
-            "Shadowbringer charges and Salt and Darkness.");
+            "Shadowbringer charges, Salt and Darkness, and resource-funded Edge inserts.");
+    }
+
+    private static bool ContainsOrderedSubsequence(
+        IReadOnlyList<uint> actual,
+        IReadOnlyList<uint> required)
+    {
+        var requiredIndex = 0;
+
+        foreach (var actionId in actual)
+        {
+            if (requiredIndex >= required.Count)
+            {
+                break;
+            }
+
+            if (actionId == required[requiredIndex])
+            {
+                requiredIndex++;
+            }
+        }
+
+        return requiredIndex == required.Count;
     }
 
     private static TrainingState CreateState()
@@ -122,6 +144,7 @@ internal static class FullDarkKnightOpenerSmokeTest
         state.SetGauge("darkside_ms", 30000);
         state.SetGauge("dark_arts", 0);
         state.SetGauge("delirium_step", 0);
+        state.SetStateValue("blood_weapon_stacks", 0);
 
         state.SetAdjustedAction(Bloodspiller, Bloodspiller);
         state.SetAdjustedAction(EdgeOfDarkness, EdgeOfShadow);
