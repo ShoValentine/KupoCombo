@@ -55,5 +55,6 @@ public enum PveActionKind
 {
     Weaponskill,
     Spell,
-    Ability
+    Ability,
+    LimitBreak
 }
