@@ -34,7 +34,7 @@
         "actionId": { "type": "integer", "minimum": 1 },
         "name": { "type": "string", "minLength": 1 },
         "job": { "type": "string", "minLength": 2, "maxLength": 4 },
-        "kind": { "enum": ["weaponskill", "spell", "ability"] },
+        "kind": { "enum": ["weaponskill", "spell", "ability", "limitBreak"] },
         "minimumLevel": { "type": "integer", "minimum": 1 },
         "castSeconds": { "type": "number", "minimum": 0 },
         "recastSeconds": { "type": "number", "minimum": 0 },
