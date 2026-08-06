@@ -58,8 +58,9 @@ internal static class DarkKnightResourceSmokeTests
         ValidateDeliriumResourceChain(policy, definition);
 
         Console.WriteLine(
-            "DRK resource smoke test passed: Dark Arts Edge is free, " +
-            "normal Edge costs MP, and the Delirium chain restores MP and Blood Weapon resources.");
+            "DRK resource smoke test passed through the generic resource engine: " +
+            "Dark Arts Edge is free, normal Edge costs MP, and the Delirium " +
+            "chain restores MP and Blood Weapon resources.");
     }
 
     private static void ValidateDarkArtsEdge(
@@ -70,7 +71,7 @@ internal static class DarkKnightResourceSmokeTests
         freeState.SetGauge("mp", 1000);
         freeState.SetGauge("dark_arts", 1);
 
-        if (policy.GetExpectedMpDelta(EdgeOfShadow, freeState) != 0)
+        if (GetResourceDelta(policy, EdgeOfShadow, freeState, "mp") != 0)
         {
             throw new InvalidDataException(
                 "Dark Arts Edge was still predicted to spend MP.");
@@ -79,9 +80,9 @@ internal static class DarkKnightResourceSmokeTests
         var freePlan = policy.BuildPracticePlan(freeState);
         var freeWindow = freePlan.Steps.FirstOrDefault(step =>
             step.SuggestedActionIds.Contains(EdgeOfShadow));
+        var freeMp = freeWindow?.GetResourceProjection("mp");
 
-        if (freeWindow == null ||
-            freeWindow.ExpectedMpAfter != freeWindow.ExpectedMpBefore)
+        if (freeMp == null || freeMp.After != freeMp.Before)
         {
             throw new InvalidDataException(
                 "Dark Arts Edge did not preserve projected MP in the practice plan.");
@@ -91,7 +92,7 @@ internal static class DarkKnightResourceSmokeTests
         paidState.SetGauge("mp", 6000);
         paidState.SetGauge("dark_arts", 0);
 
-        if (policy.GetExpectedMpDelta(EdgeOfShadow, paidState) != -3000)
+        if (GetResourceDelta(policy, EdgeOfShadow, paidState, "mp") != -3000)
         {
             throw new InvalidDataException(
                 "Normal Edge was not predicted to spend 3,000 MP.");
@@ -100,9 +101,9 @@ internal static class DarkKnightResourceSmokeTests
         var paidPlan = policy.BuildPracticePlan(paidState);
         var paidWindow = paidPlan.Steps.FirstOrDefault(step =>
             step.SuggestedActionIds.Contains(EdgeOfShadow));
+        var paidMp = paidWindow?.GetResourceProjection("mp");
 
-        if (paidWindow == null ||
-            paidWindow.ExpectedMpAfter != paidWindow.ExpectedMpBefore - 3000)
+        if (paidMp == null || paidMp.After != paidMp.Before - 3000)
         {
             throw new InvalidDataException(
                 "Normal Edge did not reduce projected MP by 3,000.");
@@ -120,10 +121,16 @@ internal static class DarkKnightResourceSmokeTests
         state.RecordAcceptedAction(Souleater);
         state.SetAdjustedAction(Bloodspiller, ScarletDelirium);
 
-        if (policy.GetExpectedMpDelta(ScarletDelirium, state) != 1200)
+        if (GetResourceDelta(policy, ScarletDelirium, state, "mp") != 1200)
         {
             throw new InvalidDataException(
                 "Scarlet Delirium did not include its own MP return and the active Blood Weapon return.");
+        }
+
+        if (GetResourceDelta(policy, ScarletDelirium, state, "blood") != 10)
+        {
+            throw new InvalidDataException(
+                "Scarlet Delirium did not expose Blood Weapon's Blood gain through the generic delta map.");
         }
 
         var forecast = policy.Forecast(state, 3);
@@ -144,14 +151,18 @@ internal static class DarkKnightResourceSmokeTests
 
         foreach (var step in forecast)
         {
-            if (step.ExpectedMpAfter - step.ExpectedMpBefore != 1200)
+            var mp = step.GetResourceProjection("mp");
+
+            if (mp == null || mp.Delta != 1200)
             {
                 throw new InvalidDataException(
                     $"Action {step.GcdActionId} did not restore the expected 1,200 MP while Blood Weapon was active.");
             }
         }
 
-        if (forecast[^1].ExpectedMpAfter != 3600)
+        var finalMp = forecast[^1].GetResourceProjection("mp");
+
+        if (finalMp == null || finalMp.After != 3600)
         {
             throw new InvalidDataException(
                 "The three-step Delirium chain did not restore 3,600 projected MP.");
@@ -159,11 +170,23 @@ internal static class DarkKnightResourceSmokeTests
 
         state.SetStateValue("blood_weapon_stacks", 0);
 
-        if (policy.GetExpectedMpDelta(ScarletDelirium, state) != 600)
+        if (GetResourceDelta(policy, ScarletDelirium, state, "mp") != 600)
         {
             throw new InvalidDataException(
                 "Scarlet Delirium's own MP restoration was not separated from Blood Weapon.");
         }
+    }
+
+    private static int GetResourceDelta(
+        RuleSetTrainingPolicy policy,
+        uint actionId,
+        TrainingState state,
+        string resource)
+    {
+        return policy.GetExpectedResourceDeltas(actionId, state)
+            .TryGetValue(resource, out var delta)
+            ? delta
+            : 0;
     }
 
     private static TrainingState CreateState(
