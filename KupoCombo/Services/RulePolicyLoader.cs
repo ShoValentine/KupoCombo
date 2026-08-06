@@ -247,6 +247,20 @@ public static class RulePolicyLoader
                         $"action '{actionAlias}' forecast reset action");
                     break;
 
+                case PolicyForecastEffectType.ReduceCooldown:
+                    RequireAction(
+                        policy,
+                        effect.Action,
+                        $"action '{actionAlias}' forecast cooldown action");
+
+                    if (effect.Value <= 0d)
+                    {
+                        throw new InvalidDataException(
+                            $"Action '{actionAlias}' in policy '{policy.Id}' " +
+                            "contains a reduceCooldown forecast effect without a positive duration.");
+                    }
+                    break;
+
                 default:
                     throw new InvalidDataException(
                         $"Action '{actionAlias}' in policy '{policy.Id}' " +
