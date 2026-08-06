@@ -61,11 +61,13 @@ internal static class MachinistWeaveSchedulingSmokeTests
 
         ValidateFiniteOverheatWindow(policy);
         ValidateSingleWeaveShortGcd(policy);
+        ValidateBlazingShotChargeCadence(policy);
         ValidateReassembleTargets(policy);
 
         Console.WriteLine(
             "MCH weave scheduling smoke test passed: Hypercharge produces five Blazing Shots, " +
-            "short GCDs carry one weave, and Reassemble is reserved for eligible 660-potency tools.");
+            "short GCDs carry one weave, Blazing Shot alternates recovered charge skills, " +
+            "and Reassemble is reserved for eligible 660-potency tools.");
     }
 
     private static void ValidateFiniteOverheatWindow(
@@ -115,6 +117,37 @@ internal static class MachinistWeaveSchedulingSmokeTests
         Require(
             step.SuggestedActionIds[0] == DoubleCheck,
             "The short-GCD window did not prioritise the capped Double Check charge.");
+    }
+
+    private static void ValidateBlazingShotChargeCadence(
+        RuleSetTrainingPolicy policy)
+    {
+        var state = CreateState();
+        state.SetStateValue("overheated", 1d);
+        state.SetStateValue("overheat_ms", 10000d);
+        state.SetStateValue("overheatShots", 5d);
+        state.SetCooldown(
+            DoubleCheck,
+            UnreadyCooldown(10f, 30f, maximumCharges: 3, charges: 2));
+        state.SetCooldown(
+            Checkmate,
+            UnreadyCooldown(10f, 30f, maximumCharges: 3, charges: 2));
+
+        var forecast = policy.Forecast(state, 3);
+
+        Require(
+            forecast.Count == 3 &&
+            forecast.All(step => step.GcdActionId == BlazingShot),
+            "The charge-cadence fixture did not produce three Blazing Shots.");
+        Require(
+            forecast[0].SuggestedActionIds.Count == 0,
+            "The first Blazing window suggested a charge before its recast reduction completed.");
+        Require(
+            forecast[1].SuggestedActionIds.SequenceEqual(new[] { DoubleCheck }),
+            "The second Blazing window did not spend the newly capped Double Check charge.");
+        Require(
+            forecast[2].SuggestedActionIds.SequenceEqual(new[] { Checkmate }),
+            "The third Blazing window did not alternate to the capped Checkmate charge.");
     }
 
     private static void ValidateReassembleTargets(
