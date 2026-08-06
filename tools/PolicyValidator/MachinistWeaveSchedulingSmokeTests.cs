@@ -66,7 +66,7 @@ internal static class MachinistWeaveSchedulingSmokeTests
 
         Console.WriteLine(
             "MCH weave scheduling smoke test passed: Hypercharge produces five Blazing Shots, " +
-            "short GCDs carry one weave, Blazing Shot alternates recovered charge skills, " +
+            "short GCDs carry one weave, capped charge skills are recovered without wasting reductions, " +
             "and Reassemble is reserved for eligible 660-potency tools.");
     }
 
@@ -115,8 +115,8 @@ internal static class MachinistWeaveSchedulingSmokeTests
             step.SuggestedActionIds.Count == 1,
             $"Blazing Shot received {step.SuggestedActionIds.Count} weave suggestions instead of one.");
         Require(
-            step.SuggestedActionIds[0] == DoubleCheck,
-            "The short-GCD window did not prioritise the capped Double Check charge.");
+            step.SuggestedActionIds[0] == Checkmate,
+            "The short-GCD window did not spend the capped Checkmate charge first.");
     }
 
     private static void ValidateBlazingShotChargeCadence(
@@ -140,14 +140,17 @@ internal static class MachinistWeaveSchedulingSmokeTests
             forecast.All(step => step.GcdActionId == BlazingShot),
             "The charge-cadence fixture did not produce three Blazing Shots.");
         Require(
-            forecast[0].SuggestedActionIds.Count == 0,
-            "The first Blazing window suggested a charge before its recast reduction completed.");
+            forecast.All(step => step.SuggestedActionIds.Count == 1),
+            "A short-GCD recovery window did not contain exactly one weave.");
         Require(
-            forecast[1].SuggestedActionIds.SequenceEqual(new[] { DoubleCheck }),
-            "The second Blazing window did not spend the newly capped Double Check charge.");
+            forecast[0].SuggestedActionIds.SequenceEqual(new[] { DoubleCheck }),
+            "The first Blazing window did not immediately correct the illegal two-charge entry state.");
         Require(
-            forecast[2].SuggestedActionIds.SequenceEqual(new[] { Checkmate }),
-            "The third Blazing window did not alternate to the capped Checkmate charge.");
+            forecast[1].SuggestedActionIds.SequenceEqual(new[] { Checkmate }),
+            "The second Blazing window did not prioritise the now-capped Checkmate charge.");
+        Require(
+            forecast[2].SuggestedActionIds.SequenceEqual(new[] { DoubleCheck }),
+            "The third Blazing window did not return to Double Check after Checkmate was relieved.");
     }
 
     private static void ValidateReassembleTargets(
