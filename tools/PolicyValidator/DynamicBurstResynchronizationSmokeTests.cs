@@ -61,6 +61,8 @@ internal static class DynamicBurstResynchronizationSmokeTests
             timelineSeconds: 0,
             livingShadowRemainingSeconds: 40,
             livingShadowReady: false);
+        midCycle.ResetProgress();
+
         AssertAlignment(
             midCycle,
             expectedTimeline: 0,
@@ -68,12 +70,14 @@ internal static class DynamicBurstResynchronizationSmokeTests
             expectedUntilBurst: 40,
             expectedReady: false);
 
-        if (policy.BuildPracticePlan(midCycle).CurrentPhase !=
-            RotationPhase.Filler)
+        var midCyclePlan = policy.BuildPracticePlan(midCycle);
+
+        if (midCyclePlan.CurrentPhase != RotationPhase.Filler ||
+            midCyclePlan.Steps.FirstOrDefault()?.GcdActionId != HardSlash)
         {
             throw new InvalidDataException(
-                "A DRK practice start 40 seconds before Living Shadow was " +
-                "not resynchronised into the filler phase.");
+                "A fresh DRK Practice Mode session 40 seconds before Living " +
+                "Shadow did not skip the Unmend opener and enter filler.");
         }
 
         var pooling = CreateDarkKnightState(
