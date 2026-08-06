@@ -76,6 +76,10 @@ public sealed class PolicyActionDefinition
 
     public string AdjustedFrom { get; set; } = string.Empty;
 
+    public int? MinimumNextGcdPotency { get; set; }
+
+    public List<string> ExcludedNextGcdActions { get; set; } = new();
+
     public bool OverrideCatalogueForecastEffects { get; set; }
 
     [JsonIgnore]
