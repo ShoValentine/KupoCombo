@@ -7,6 +7,7 @@ using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using KupoCombo.Models;
+using KupoCombo.Services;
 using LuminaAction = Lumina.Excel.Sheets.Action;
 
 namespace KupoCombo.Windows;
@@ -126,14 +127,21 @@ public sealed class OverlayWindow : Window, IDisposable
         var forecast = session.CurrentForecast;
         var currentGcdSeconds = forecast.FirstOrDefault()?.DurationSeconds ?? 0f;
         var timing = session.Snapshot.TimingProfile;
-        var currentMp = session.Snapshot.GetGauge("mp");
         var plan = session.CurrentPlan;
+        var headerParts = new List<string>
+        {
+            FormatPhase(session.CurrentPhase)
+        };
+        var resourceSummary = FormatResourceSummary(session);
 
-        ImGui.TextDisabled(
-            $"{FormatPhase(session.CurrentPhase)} | " +
-            $"MP {currentMp:N0}/10,000 | " +
-            $"GCD {currentGcdSeconds:0.00}s | " +
-            $"SkS {timing.SkillSpeed:N0}");
+        if (!string.IsNullOrWhiteSpace(resourceSummary))
+        {
+            headerParts.Add(resourceSummary);
+        }
+
+        headerParts.Add($"GCD {currentGcdSeconds:0.00}s");
+        headerParts.Add($"SkS {timing.SkillSpeed:N0}");
+        ImGui.TextDisabled(string.Join(" | ", headerParts));
 
         if (!plan.IsEmpty)
         {
@@ -192,6 +200,47 @@ public sealed class OverlayWindow : Window, IDisposable
             ImGui.TextDisabled(
                 "Smaller outlined icons are weaves. The next two GCDs stay committed; the full-cycle plan adapts behind them.");
         }
+    }
+
+    private static string FormatResourceSummary(TrainingSession session)
+    {
+        if (session.Policy is not RuleSetTrainingPolicy policy)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(
+            " | ",
+            policy.Definition.StateInputs
+                .Where(item => item.Value.Kind == PolicyStateValueKind.Resource)
+                .Select(item =>
+                {
+                    var label = FormatResourceName(
+                        item.Key,
+                        item.Value.DisplayName);
+                    var current = session.Snapshot.GetGauge(item.Key);
+
+                    return item.Value.Maximum.HasValue
+                        ? $"{label} {current:N0}/{item.Value.Maximum.Value:N0}"
+                        : $"{label} {current:N0}";
+                }));
+    }
+
+    private static string FormatResourceName(
+        string alias,
+        string configuredName)
+    {
+        if (!string.IsNullOrWhiteSpace(configuredName))
+        {
+            return configuredName;
+        }
+
+        if (alias.Length <= 3)
+        {
+            return alias.ToUpperInvariant();
+        }
+
+        return char.ToUpperInvariant(alias[0]) + alias[1..];
     }
 
     private void DrawForecastRibbon(
