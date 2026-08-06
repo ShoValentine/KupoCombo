@@ -467,12 +467,16 @@ public sealed class PracticePlanValidator
                 actionId);
         }
 
-        if (action.Role != PolicyActionRole.Graded)
+        var roleIsInvalid = expectedLane == PolicyLane.Gcd
+            ? action.Role != PolicyActionRole.Graded
+            : action.Role == PolicyActionRole.Observed;
+
+        if (roleIsInvalid)
         {
             AddError(
                 issues,
                 PlanValidationCode.UngradedAction,
-                $"Action {actionId} has role {action.Role} and cannot form part of a graded plan.",
+                $"Action {actionId} has role {action.Role} and cannot appear in the {expectedLane} plan lane.",
                 stepOffset,
                 actionId);
         }
