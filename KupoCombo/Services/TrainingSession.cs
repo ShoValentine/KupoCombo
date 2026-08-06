@@ -42,6 +42,9 @@ public sealed class TrainingSession
 {
     private const int ForecastViewportGcdCount = 12;
     private const int CommittedGcdDepth = 2;
+    private const int RecoverySettlingRefreshCount = 2;
+    private const int RecoveryConvergenceStepCount = 3;
+    private const int MaximumRecoveryStepCount = 8;
     private const float DefaultGcdSeconds = 2.5f;
 
     private static readonly TimeSpan PlanRefreshInterval =
@@ -51,6 +54,10 @@ public sealed class TrainingSession
 
     private readonly Dictionary<string, PendingResourceWindow>
         pendingResourceWindows = new(StringComparer.OrdinalIgnoreCase);
+    private readonly RecoveryPlanEngine recoveryPlanEngine = new();
+
+    private PendingRecoveryContext? pendingRecovery;
+    private int recoveryStepsRemaining;
     private bool hasReceivedLiveState;
     private DateTime nextPlanRefreshUtc = DateTime.MinValue;
 
@@ -64,6 +71,9 @@ public sealed class TrainingSession
     public TrainingDecision? CurrentDecision { get; private set; }
 
     public PracticePlan CurrentPlan { get; private set; } = PracticePlan.Empty;
+
+    public RecoveryPlan CurrentRecoveryPlan { get; private set; } =
+        RecoveryPlan.Empty;
 
     public IReadOnlyList<TrainingForecastStep> CurrentForecast
     {
@@ -97,6 +107,14 @@ public sealed class TrainingSession
     public bool IsEndless =>
         Policy != null && !Policy.ExpectedLength.HasValue;
 
+    public bool IsRecoveryPending => pendingRecovery != null;
+
+    public bool IsRecovering =>
+        CurrentRecoveryPlan.IsAvailable &&
+        recoveryStepsRemaining > 0;
+
+    public int RecoveryStepsRemaining => recoveryStepsRemaining;
+
     public int Length =>
         Policy?.ExpectedLength ?? 0;
 
@@ -114,6 +132,7 @@ public sealed class TrainingSession
         hasReceivedLiveState = false;
         nextPlanRefreshUtc = DateTime.MinValue;
         ClearPendingResourceActions();
+        ResetRecoveryState();
         CurrentPlan = PracticePlan.Empty;
         RecalculateDecision();
         State = CurrentDecision?.IsComplete == true
@@ -199,6 +218,10 @@ public sealed class TrainingSession
             hasReceivedLiveState = true;
             RecalculateDecision();
         }
+        else if (pendingRecovery != null)
+        {
+            ContinuePendingRecovery();
+        }
         else if (Policy is ITrainingForecastPolicy)
         {
             ReconcileForecastWithoutBreakingCommitment();
@@ -227,6 +250,7 @@ public sealed class TrainingSession
         hasReceivedLiveState = false;
         nextPlanRefreshUtc = DateTime.MinValue;
         ClearPendingResourceActions();
+        ResetRecoveryState();
         State = TrainingSessionState.Stopped;
     }
 
@@ -276,17 +300,40 @@ public sealed class TrainingSession
             LastExpectedActionId = decision.PreferredActionId;
             Snapshot.RecordRejectedAction(actionId);
 
-            if (decision.MistakeResponse == TrainingMistakeResponse.ResetProgress)
+            var supportsRecovery =
+                decision.MistakeResponse == TrainingMistakeResponse.KeepProgress &&
+                Policy is IPracticePlanPolicy &&
+                !CurrentPlan.IsEmpty;
+
+            if (supportsRecovery)
             {
-                Snapshot.ResetProgress();
-                State = TrainingSessionState.Armed;
+                if (IsGcdAction(actionId))
+                {
+                    AdvancePracticeTimeline(actionId);
+                }
+
+                BeginPendingRecovery(
+                    CurrentPlan,
+                    actionId,
+                    decision.PreferredActionId);
+                State = TrainingSessionState.Running;
             }
             else
             {
-                State = TrainingSessionState.Running;
-            }
+                if (decision.MistakeResponse ==
+                    TrainingMistakeResponse.ResetProgress)
+                {
+                    Snapshot.ResetProgress();
+                    State = TrainingSessionState.Armed;
+                }
+                else
+                {
+                    State = TrainingSessionState.Running;
+                }
 
-            RecalculateDecision();
+                ResetRecoveryState();
+                RecalculateDecision();
+            }
 
             return new TrainingActionResult
             {
@@ -310,9 +357,11 @@ public sealed class TrainingSession
             CurrentForecast[0].GcdActionId == actionId)
         {
             AdvanceCommittedForecast();
+            AdvanceRecoveryProgress(actionId);
         }
         else
         {
+            ClearResolvedRecoveryPlan();
             RecalculateDecision();
         }
 
@@ -371,6 +420,188 @@ public sealed class TrainingSession
         Snapshot.SetCombatTimeSeconds(
             Snapshot.CombatTimeSeconds +
             Math.Clamp(elapsedSeconds, 0.5f, 10f));
+    }
+
+    private bool IsGcdAction(uint actionId)
+    {
+        if (Policy is RuleSetTrainingPolicy rulePolicy)
+        {
+            foreach (var action in rulePolicy.Definition.Actions.Values)
+            {
+                if (action.ActionId == actionId ||
+                    Snapshot.GetAdjustedAction(action.ActionId) == actionId)
+                {
+                    return action.Lane == PolicyLane.Gcd;
+                }
+            }
+        }
+
+        return CurrentDecision?.PreferredActionId == actionId;
+    }
+
+    private void BeginPendingRecovery(
+        PracticePlan originalPlan,
+        uint usedActionId,
+        uint expectedActionId)
+    {
+        pendingRecovery = new PendingRecoveryContext(
+            originalPlan,
+            usedActionId,
+            expectedActionId,
+            RecoverySettlingRefreshCount);
+        CurrentRecoveryPlan = RecoveryPlan.Empty;
+        recoveryStepsRemaining = 0;
+
+        // Keep the committed route motionless while the action's live gauge,
+        // status, combo, and cooldown consequences settle into the snapshot.
+        nextPlanRefreshUtc = DateTime.MaxValue;
+    }
+
+    private void ContinuePendingRecovery()
+    {
+        if (pendingRecovery == null)
+        {
+            return;
+        }
+
+        pendingRecovery.RefreshesRemaining--;
+
+        if (pendingRecovery.RefreshesRemaining > 0)
+        {
+            return;
+        }
+
+        ResolvePendingRecovery();
+    }
+
+    private void ResolvePendingRecovery()
+    {
+        var recovery = pendingRecovery;
+        pendingRecovery = null;
+
+        if (recovery == null ||
+            Policy is not IPracticePlanPolicy planPolicy)
+        {
+            ResetRecoveryState();
+            RecalculateDecision();
+            return;
+        }
+
+        var freshDecision = Policy.Evaluate(Snapshot);
+        var freshPlan = freshDecision.IsComplete
+            ? PracticePlan.Empty
+            : ReindexPlan(planPolicy.BuildPracticePlan(Snapshot));
+
+        CurrentRecoveryPlan = recoveryPlanEngine.Build(
+            new RecoveryPlanRequest
+            {
+                OriginalPlan = recovery.OriginalPlan,
+                RevisedPlan = freshPlan,
+                UsedActionId = recovery.UsedActionId,
+                ExpectedActionId = recovery.ExpectedActionId,
+                MinimumConvergenceSteps = RecoveryConvergenceStepCount,
+                MaximumRecoverySteps = MaximumRecoveryStepCount
+            });
+
+        recoveryStepsRemaining = CurrentRecoveryPlan.Disposition ==
+            RecoveryPlanDisposition.GuidedRecovery
+            ? CurrentRecoveryPlan.RecoverySteps.Count
+            : 0;
+
+        if (freshDecision.IsComplete || freshPlan.IsEmpty)
+        {
+            CurrentDecision = freshDecision;
+            CurrentPlan = freshPlan;
+            CurrentForecast = Array.Empty<TrainingForecastStep>();
+            nextPlanRefreshUtc = DateTime.UtcNow + PlanRefreshInterval;
+            return;
+        }
+
+        AdoptFreshPlan(freshDecision, freshPlan);
+    }
+
+    private void AdoptFreshPlan(
+        TrainingDecision freshDecision,
+        PracticePlan freshPlan)
+    {
+        CurrentPlan = freshPlan;
+        CurrentForecast = CurrentPlan.Steps
+            .Take(ForecastViewportGcdCount)
+            .ToArray();
+
+        if (CurrentForecast.Count == 0)
+        {
+            CurrentDecision = freshDecision;
+            nextPlanRefreshUtc = DateTime.UtcNow + PlanRefreshInterval;
+            return;
+        }
+
+        var head = CurrentForecast[0];
+        CurrentDecision = new TrainingDecision
+        {
+            PreferredActionId = head.GcdActionId,
+            AcceptableActionIds = freshDecision.PreferredActionId ==
+                head.GcdActionId
+                ? freshDecision.AcceptableActionIds
+                : Array.Empty<uint>(),
+            SuggestedActionIds = head.SuggestedActionIds,
+            Reason = head.Reason,
+            SuggestionReason = head.SuggestionReason,
+            MistakeResponse = freshDecision.MistakeResponse
+        };
+        nextPlanRefreshUtc = DateTime.UtcNow + PlanRefreshInterval;
+    }
+
+    private void AdvanceRecoveryProgress(uint actionId)
+    {
+        if (!CurrentRecoveryPlan.IsAvailable)
+        {
+            return;
+        }
+
+        if (recoveryStepsRemaining <= 0)
+        {
+            ClearResolvedRecoveryPlan();
+            return;
+        }
+
+        var completedRecoverySteps =
+            CurrentRecoveryPlan.RecoverySteps.Count -
+            recoveryStepsRemaining;
+
+        if (completedRecoverySteps < 0 ||
+            completedRecoverySteps >=
+            CurrentRecoveryPlan.RecoverySteps.Count)
+        {
+            ClearResolvedRecoveryPlan();
+            return;
+        }
+
+        if (CurrentRecoveryPlan
+                .RecoverySteps[completedRecoverySteps]
+                .GcdActionId != actionId)
+        {
+            return;
+        }
+
+        recoveryStepsRemaining--;
+
+        if (recoveryStepsRemaining <= 0)
+        {
+            ClearResolvedRecoveryPlan();
+        }
+    }
+
+    private void ClearResolvedRecoveryPlan()
+    {
+        CurrentRecoveryPlan = RecoveryPlan.Empty;
+        recoveryStepsRemaining = 0;
+    }
+
+    private void ResetRecoveryState()
+    {
+        pendingRecovery = null;
+        ClearResolvedRecoveryPlan();
     }
 
     private void RecordResourceObservation(
@@ -779,6 +1010,29 @@ public sealed class TrainingSession
             Outcome = TrainingActionOutcome.Ignored,
             UsedActionId = actionId
         };
+    }
+
+    private sealed class PendingRecoveryContext
+    {
+        public PendingRecoveryContext(
+            PracticePlan originalPlan,
+            uint usedActionId,
+            uint expectedActionId,
+            int refreshesRemaining)
+        {
+            OriginalPlan = originalPlan;
+            UsedActionId = usedActionId;
+            ExpectedActionId = expectedActionId;
+            RefreshesRemaining = refreshesRemaining;
+        }
+
+        public PracticePlan OriginalPlan { get; }
+
+        public uint UsedActionId { get; }
+
+        public uint ExpectedActionId { get; }
+
+        public int RefreshesRemaining { get; set; }
     }
 
     private sealed class PendingResourceWindow
