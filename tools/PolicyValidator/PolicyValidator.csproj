@@ -13,6 +13,8 @@
              Link="Models\ActionResolution.cs" />
     <Compile Include="..\..\KupoCombo\Models\BurstTimelineProfileRegistry.cs"
              Link="Models\BurstTimelineProfileRegistry.cs" />
+    <Compile Include="..\..\KupoCombo\Models\PlanValidation.cs"
+             Link="Models\PlanValidation.cs" />
     <Compile Include="..\..\KupoCombo\Models\PracticePlan.cs"
              Link="Models\PracticePlan.cs" />
     <Compile Include="..\..\KupoCombo\Models\PveActionCatalogDefinition.cs"
@@ -45,6 +47,8 @@
              Link="Services\PolicyConditionEvaluator.cs" />
     <Compile Include="..\..\KupoCombo\Services\PolicyEvaluationContext.cs"
              Link="Services\PolicyEvaluationContext.cs" />
+    <Compile Include="..\..\KupoCombo\Services\PracticePlanValidator.cs"
+             Link="Services\PracticePlanValidator.cs" />
     <Compile Include="..\..\KupoCombo\Services\PveActionCatalogLoader.cs"
              Link="Services\PveActionCatalogLoader.cs" />
     <Compile Include="..\..\KupoCombo\Services\RecoveryPlanEngine.cs"
