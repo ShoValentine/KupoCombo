@@ -104,7 +104,7 @@ internal static class PracticePlanSmokeTests
 
         Console.WriteLine(
             "Practice plan smoke test passed: 120-second player-timed plan, " +
-            "explicit phases, stable live timeline, MP projection, and live MP attribution are active.");
+            "explicit phases, stable live timeline, MP projection, and delayed live MP attribution are active.");
     }
 
     private static void ValidateLiveSession(
@@ -122,8 +122,19 @@ internal static class PracticePlanSmokeTests
                 "Live practice time did not advance by the player's adjusted GCD.");
         }
 
-        session.RefreshState(state => state.SetGauge("mp", 3000));
+        session.ObserveAction(EdgeOfShadow);
+        session.RefreshState(state => state.SetGauge("mp", 6000));
+
+        if (session.MpTransactions.Any(transaction =>
+                transaction.Kind == MpTransactionKind.ActionWindow &&
+                transaction.ActionIds.Contains(EdgeOfShadow)))
+        {
+            throw new InvalidDataException(
+                "Edge was closed before its delayed MP spend arrived.");
+        }
+
         session.ProcessAction(EdgeOfShadow);
+        session.RefreshState(state => state.SetGauge("mp", 3000));
 
         var actionTransaction = session.MpTransactions.LastOrDefault();
 
@@ -135,11 +146,10 @@ internal static class PracticePlanSmokeTests
             actionTransaction.UnattributedDelta != 0)
         {
             throw new InvalidDataException(
-                "Edge MP spend was not attributed to the detected action.");
+                "Delayed Edge MP spend was not attributed to the detected action.");
         }
 
         session.RefreshState(state => state.SetGauge("mp", 3200));
-        session.RefreshState(state => state.SetGauge("mp", 3400));
 
         if (!session.MpTransactions.Any(transaction =>
                 transaction.Kind == MpTransactionKind.PassiveRecovery &&
@@ -160,6 +170,7 @@ internal static class PracticePlanSmokeTests
         state.SetGauge("darkside_ms", 30000);
         state.SetGauge("dark_arts", 0);
         state.SetGauge("delirium_step", 0);
+        state.SetStateValue("blood_weapon_stacks", 0);
         state.SetPlayerTiming(1234, 567, 0);
 
         state.SetAdjustedAction(Bloodspiller, Bloodspiller);
