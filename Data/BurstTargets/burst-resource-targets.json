@@ -4,6 +4,11 @@
   "policies": [
     {
       "policyId": "drk-standard-dummy-100",
+      "job": "DRK",
+      "minimumLevel": 100,
+      "burstAnchorActionIds": [
+        16472
+      ],
       "minorBurstCycleSeconds": 120,
       "burstWindowSeconds": 20,
       "poolingWindowSeconds": 15,
@@ -46,6 +51,11 @@
     },
     {
       "policyId": "mch-standard-dummy-100",
+      "job": "MCH",
+      "minimumLevel": 100,
+      "burstAnchorActionIds": [
+        2878
+      ],
       "minorBurstCycleSeconds": 120,
       "burstWindowSeconds": 20,
       "poolingWindowSeconds": 15,
