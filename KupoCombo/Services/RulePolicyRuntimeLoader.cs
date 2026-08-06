@@ -18,7 +18,7 @@ internal static class RulePolicyRuntimeLoader
             $"{normalisedJob}.json");
         var cataloguePath = ResolveDataPath(
             "Actions",
-            "pve-actions.json");
+            Path.Combine("Jobs", $"{normalisedJob}.json"));
         var policies = RulePolicyLoader.Load(policyPath, normalisedJob);
         var catalogue = PveActionCatalogLoader.Load(cataloguePath);
 
