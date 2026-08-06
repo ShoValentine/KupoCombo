@@ -6,8 +6,19 @@
       "policyId": "drk-standard-dummy-100",
       "job": "DRK",
       "minimumLevel": 100,
-      "burstAnchorActionIds": [
-        16472
+      "burstAnchors": [
+        {
+          "actionId": 16472,
+          "cycleSeconds": 120
+        },
+        {
+          "actionId": 7390,
+          "cycleSeconds": 60
+        },
+        {
+          "actionId": 3639,
+          "cycleSeconds": 60
+        }
       ],
       "minorBurstCycleSeconds": 120,
       "burstWindowSeconds": 20,
@@ -70,8 +81,15 @@
       "policyId": "mch-standard-dummy-100",
       "job": "MCH",
       "minimumLevel": 100,
-      "burstAnchorActionIds": [
-        2878
+      "burstAnchors": [
+        {
+          "actionId": 2878,
+          "cycleSeconds": 120
+        },
+        {
+          "actionId": 7414,
+          "cycleSeconds": 120
+        }
       ],
       "minorBurstCycleSeconds": 120,
       "burstWindowSeconds": 20,

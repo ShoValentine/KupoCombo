@@ -6,8 +6,10 @@ internal static class DynamicBurstResynchronizationSmokeTests
 {
     private const uint HardSlash = 3617;
     private const uint Bloodspiller = 7392;
+    private const uint Delirium = 7390;
     private const uint EdgeOfDarkness = 16467;
     private const uint EdgeOfShadow = 16470;
+    private const uint CarveAndSpit = 3639;
     private const uint LivingShadow = 16472;
     private const uint SaltedEarth = 3643;
 
@@ -21,6 +23,7 @@ internal static class DynamicBurstResynchronizationSmokeTests
     private const uint HeatedCleanShot = 7413;
     private const uint BlazingShot = 36978;
     private const uint Wildfire = 2878;
+    private const uint BarrelStabilizer = 7414;
     private const uint Hypercharge = 17209;
     private const uint AutomatonQueen = 16501;
 
@@ -47,8 +50,9 @@ internal static class DynamicBurstResynchronizationSmokeTests
 
         Console.WriteLine(
             "Dynamic burst resynchronisation smoke test passed: live anchor " +
-            "cooldowns shift filler, pooling, and burst phases while the raw " +
-            "practice clock continues advancing.");
+            "cooldowns shift phases, aligned anchors form a consensus, " +
+            "majorities reject stale outliers, and ties retain the primary " +
+            "anchor while the raw practice clock continues advancing.");
     }
 
     private static void ValidateDarkKnight(
@@ -100,6 +104,60 @@ internal static class DynamicBurstResynchronizationSmokeTests
             throw new InvalidDataException(
                 "DRK did not shift into pooling when Living Shadow drifted " +
                 "to ten seconds from readiness.");
+        }
+
+        var alignedAnchors = CreateDarkKnightState(
+            timelineSeconds: 95,
+            livingShadowRemainingSeconds: 10,
+            livingShadowReady: false);
+        alignedAnchors.SetCooldown(
+            Delirium,
+            UnreadyCooldown(10f, 60f));
+        alignedAnchors.SetCooldown(
+            CarveAndSpit,
+            UnreadyCooldown(10f, 60f));
+
+        AssertAlignment(
+            alignedAnchors,
+            expectedTimeline: 95,
+            expectedEffective: 110,
+            expectedUntilBurst: 10,
+            expectedReady: false);
+        AssertConsensus(
+            alignedAnchors,
+            expectedObserved: 3,
+            expectedAgreement: 3,
+            expectedPrimary: true);
+
+        var majorityResync = CreateDarkKnightState(
+            timelineSeconds: 95,
+            livingShadowRemainingSeconds: 20,
+            livingShadowReady: false);
+        majorityResync.SetCooldown(
+            Delirium,
+            UnreadyCooldown(10f, 60f));
+        majorityResync.SetCooldown(
+            CarveAndSpit,
+            UnreadyCooldown(10f, 60f));
+
+        AssertAlignment(
+            majorityResync,
+            expectedTimeline: 95,
+            expectedEffective: 110,
+            expectedUntilBurst: 10,
+            expectedReady: false);
+        AssertConsensus(
+            majorityResync,
+            expectedObserved: 3,
+            expectedAgreement: 2,
+            expectedPrimary: false);
+
+        if (majorityResync.TryGetBurstTimelineAlignment(out var majority) &&
+            majority.AnchorActionId == LivingShadow)
+        {
+            throw new InvalidDataException(
+                "The DRK anchor majority did not reject the stale Living " +
+                "Shadow cooldown snapshot.");
         }
 
         var delayedReady = CreateDarkKnightState(
@@ -191,10 +249,50 @@ internal static class DynamicBurstResynchronizationSmokeTests
                 "the live Wildfire cooldown.");
         }
 
+        var alignedAnchors = CreateMachinistState(
+            timelineSeconds: 95,
+            wildfireRemainingSeconds: 10,
+            wildfireReady: false,
+            barrelStabilizerRemainingSeconds: 10,
+            barrelStabilizerReady: false);
+
+        AssertAlignment(
+            alignedAnchors,
+            expectedTimeline: 95,
+            expectedEffective: 110,
+            expectedUntilBurst: 10,
+            expectedReady: false);
+        AssertConsensus(
+            alignedAnchors,
+            expectedObserved: 2,
+            expectedAgreement: 2,
+            expectedPrimary: true);
+
+        var tiedAnchors = CreateMachinistState(
+            timelineSeconds: 95,
+            wildfireRemainingSeconds: 10,
+            wildfireReady: false,
+            barrelStabilizerRemainingSeconds: 20,
+            barrelStabilizerReady: false);
+
+        AssertAlignment(
+            tiedAnchors,
+            expectedTimeline: 95,
+            expectedEffective: 110,
+            expectedUntilBurst: 10,
+            expectedReady: false);
+        AssertConsensus(
+            tiedAnchors,
+            expectedObserved: 2,
+            expectedAgreement: 1,
+            expectedPrimary: true);
+
         var delayedReady = CreateMachinistState(
             timelineSeconds: 130,
             wildfireRemainingSeconds: 0,
-            wildfireReady: true);
+            wildfireReady: true,
+            barrelStabilizerRemainingSeconds: 0,
+            barrelStabilizerReady: true);
 
         AssertAlignment(
             delayedReady,
@@ -202,13 +300,18 @@ internal static class DynamicBurstResynchronizationSmokeTests
             expectedEffective: 120,
             expectedUntilBurst: 0,
             expectedReady: true);
+        AssertConsensus(
+            delayedReady,
+            expectedObserved: 2,
+            expectedAgreement: 2,
+            expectedPrimary: true);
 
         if (policy.BuildPracticePlan(delayedReady).CurrentPhase !=
             RotationPhase.Burst)
         {
             throw new InvalidDataException(
-                "A ready-but-delayed Wildfire did not resynchronise MCH into " +
-                "the burst phase.");
+                "Ready Wildfire and Barrel Stabilizer did not resynchronise " +
+                "MCH into the burst phase.");
         }
     }
 
@@ -245,6 +348,26 @@ internal static class DynamicBurstResynchronizationSmokeTests
                 $"{alignment.AnchorIsReady}; expected {expectedTimeline:0.###}, " +
                 $"{expectedEffective:0.###}, {expectedUntilBurst:0.###}, " +
                 $"{expectedReady}.");
+        }
+    }
+
+    private static void AssertConsensus(
+        TrainingState state,
+        int expectedObserved,
+        int expectedAgreement,
+        bool expectedPrimary)
+    {
+        if (!state.TryGetBurstTimelineAlignment(out var alignment) ||
+            alignment.ObservedAnchorCount != expectedObserved ||
+            alignment.AgreementCount != expectedAgreement ||
+            alignment.UsedPrimaryAnchor != expectedPrimary)
+        {
+            throw new InvalidDataException(
+                $"{state.Job} consensus observed " +
+                $"{alignment.ObservedAnchorCount} anchor(s), agreed on " +
+                $"{alignment.AgreementCount}, and primary usage was " +
+                $"{alignment.UsedPrimaryAnchor}; expected {expectedObserved}, " +
+                $"{expectedAgreement}, {expectedPrimary}.");
         }
     }
 
@@ -297,7 +420,9 @@ internal static class DynamicBurstResynchronizationSmokeTests
     private static TrainingState CreateMachinistState(
         double timelineSeconds,
         float wildfireRemainingSeconds,
-        bool wildfireReady)
+        bool wildfireReady,
+        float? barrelStabilizerRemainingSeconds = null,
+        bool barrelStabilizerReady = false)
     {
         var state = new TrainingState();
         state.Begin("MCH", 100);
@@ -321,6 +446,18 @@ internal static class DynamicBurstResynchronizationSmokeTests
                 : UnreadyCooldown(
                     wildfireRemainingSeconds,
                     120f));
+
+        if (barrelStabilizerRemainingSeconds.HasValue)
+        {
+            state.SetCooldown(
+                BarrelStabilizer,
+                barrelStabilizerReady
+                    ? ReadyCooldown(120f)
+                    : UnreadyCooldown(
+                        barrelStabilizerRemainingSeconds.Value,
+                        120f));
+        }
+
         return state;
     }
 

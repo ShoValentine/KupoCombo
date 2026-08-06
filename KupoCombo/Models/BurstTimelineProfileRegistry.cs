@@ -18,6 +18,14 @@ public readonly record struct BurstTimelineAlignment(
 {
     public double DriftSeconds =>
         EffectiveCombatTimeSeconds - TimelineCombatTimeSeconds;
+
+    public int ObservedAnchorCount { get; init; }
+
+    public int AgreementCount { get; init; }
+
+    public double AnchorSpreadSeconds { get; init; }
+
+    public bool UsedPrimaryAnchor { get; init; }
 }
 
 internal sealed class BurstTimelineProfileFile
@@ -38,11 +46,44 @@ internal sealed class BurstTimelineProfileDefinition
     public int? MinorBurstCycleSeconds { get; set; }
 
     public List<uint> BurstAnchorActionIds { get; set; } = new();
+
+    public List<BurstTimelineAnchorDefinition> BurstAnchors { get; set; } = new();
+
+    public IReadOnlyList<BurstTimelineAnchorDefinition> ResolveAnchors()
+    {
+        var configured = BurstAnchors
+            .Where(anchor => anchor.ActionId != 0)
+            .GroupBy(anchor => anchor.ActionId)
+            .Select(group => group.First())
+            .ToArray();
+
+        if (configured.Length > 0)
+        {
+            return configured;
+        }
+
+        return BurstAnchorActionIds
+            .Where(actionId => actionId != 0)
+            .Distinct()
+            .Select(actionId => new BurstTimelineAnchorDefinition
+            {
+                ActionId = actionId
+            })
+            .ToArray();
+    }
+}
+
+internal sealed class BurstTimelineAnchorDefinition
+{
+    public uint ActionId { get; set; }
+
+    public int? CycleSeconds { get; set; }
 }
 
 internal static class BurstTimelineProfileRegistry
 {
     private const string FileName = "burst-resource-targets.json";
+    private const double AnchorAgreementToleranceSeconds = 3d;
 
     private static readonly Lazy<IReadOnlyList<BurstTimelineProfileDefinition>>
         Profiles = new(LoadProfiles);
@@ -67,17 +108,9 @@ internal static class BurstTimelineProfileRegistry
             return false;
         }
 
-        var anchor = profile.BurstAnchorActionIds
-            .Select(actionId => new
-            {
-                ActionId = actionId,
-                Cooldown = cooldowns.TryGetValue(actionId, out var cooldown)
-                    ? cooldown
-                    : null
-            })
-            .FirstOrDefault(item => item.Cooldown != null);
+        var anchors = profile.ResolveAnchors();
 
-        if (anchor?.Cooldown == null)
+        if (anchors.Count == 0)
         {
             return false;
         }
@@ -86,54 +119,73 @@ internal static class BurstTimelineProfileRegistry
             1d,
             profile.MinorBurstCycleSeconds ?? 120);
         var timeline = Math.Max(0d, timelineCombatTimeSeconds);
-        var cooldownSnapshot = anchor.Cooldown;
-        double effectiveTime;
-        double secondsSinceBurst;
-        double secondsUntilBurst;
+        var candidates = new List<AnchorCandidate>();
+        var observedAnchorCount = 0;
 
-        if (cooldownSnapshot.IsReady)
+        for (var index = 0; index < anchors.Count; index++)
         {
-            var readySince = Math.Max(
-                0d,
-                anchorReadySinceTimelineSeconds ?? timeline);
-            var alignedBoundary = FindNearestCycleBoundary(
-                readySince,
-                cycleSeconds);
-            var elapsedReadyTime = Math.Max(0d, timeline - readySince);
+            var anchor = anchors[index];
 
-            effectiveTime = alignedBoundary + elapsedReadyTime;
-            secondsSinceBurst = elapsedReadyTime;
-            secondsUntilBurst = 0d;
+            if (!cooldowns.TryGetValue(anchor.ActionId, out var cooldown))
+            {
+                continue;
+            }
+
+            observedAnchorCount++;
+            AddAnchorCandidates(
+                candidates,
+                index,
+                anchor,
+                cooldown,
+                cycleSeconds,
+                timeline,
+                index == 0
+                    ? anchorReadySinceTimelineSeconds
+                    : null);
         }
-        else
+
+        if (candidates.Count == 0)
         {
-            var remaining = Math.Clamp(
-                cooldownSnapshot.RemainingSeconds,
-                0f,
-                (float)cycleSeconds);
-            var pointInCycle = remaining <= 0.001f
-                ? 0d
-                : cycleSeconds - remaining;
-            var cycleIndex = Math.Max(
-                0d,
-                Math.Round(
-                    (timeline - pointInCycle) / cycleSeconds,
-                    MidpointRounding.AwayFromZero));
-
-            effectiveTime = pointInCycle + (cycleIndex * cycleSeconds);
-            secondsSinceBurst = pointInCycle;
-            secondsUntilBurst = remaining;
+            return false;
         }
+
+        var cluster = SelectBestCluster(candidates, timeline);
+        var effectiveTime = Median(
+            cluster.Candidates.Select(candidate => candidate.EffectiveTime));
+        var representative = cluster.Candidates
+            .OrderBy(candidate =>
+                Math.Abs(candidate.EffectiveTime - effectiveTime))
+            .ThenBy(candidate => candidate.AnchorIndex)
+            .First();
+        var phaseSeconds = PositiveModulo(effectiveTime, cycleSeconds);
+        var anchorIsReady = representative.IsReady;
+        var secondsSinceBurst = phaseSeconds;
+        var secondsUntilBurst = anchorIsReady
+            ? 0d
+            : phaseSeconds <= 0.001d
+                ? cycleSeconds
+                : cycleSeconds - phaseSeconds;
+        var spread = cluster.Candidates.Count <= 1
+            ? 0d
+            : cluster.Candidates.Max(candidate => candidate.EffectiveTime) -
+              cluster.Candidates.Min(candidate => candidate.EffectiveTime);
 
         alignment = new BurstTimelineAlignment(
             profile.PolicyId,
-            anchor.ActionId,
+            representative.ActionId,
             cycleSeconds,
             timeline,
             effectiveTime,
             secondsSinceBurst,
             secondsUntilBurst,
-            cooldownSnapshot.IsReady);
+            anchorIsReady)
+        {
+            ObservedAnchorCount = observedAnchorCount,
+            AgreementCount = cluster.Candidates.Count,
+            AnchorSpreadSeconds = spread,
+            UsedPrimaryAnchor = cluster.Candidates.Any(candidate =>
+                candidate.AnchorIndex == 0)
+        };
         return true;
     }
 
@@ -143,7 +195,99 @@ internal static class BurstTimelineProfileRegistry
         uint actionId)
     {
         return TryGetProfile(job, level, out var profile) &&
-            profile.BurstAnchorActionIds.FirstOrDefault() == actionId;
+            profile.ResolveAnchors().FirstOrDefault()?.ActionId == actionId;
+    }
+
+    private static void AddAnchorCandidates(
+        ICollection<AnchorCandidate> candidates,
+        int anchorIndex,
+        BurstTimelineAnchorDefinition anchor,
+        CooldownSnapshot cooldown,
+        double profileCycleSeconds,
+        double timeline,
+        double? readySinceTimelineSeconds)
+    {
+        var anchorCycleSeconds = Math.Clamp(
+            anchor.CycleSeconds ?? (int)profileCycleSeconds,
+            1,
+            (int)Math.Ceiling(profileCycleSeconds));
+        var occurrenceCount = Math.Max(
+            1,
+            (int)Math.Ceiling(profileCycleSeconds / anchorCycleSeconds));
+        double elapsedInAnchorCycle;
+
+        if (cooldown.IsReady)
+        {
+            elapsedInAnchorCycle = readySinceTimelineSeconds.HasValue
+                ? Math.Max(0d, timeline - readySinceTimelineSeconds.Value)
+                : 0d;
+        }
+        else
+        {
+            var remaining = Math.Clamp(
+                cooldown.RemainingSeconds,
+                0f,
+                (float)anchorCycleSeconds);
+            elapsedInAnchorCycle = remaining <= 0.001f
+                ? 0d
+                : anchorCycleSeconds - remaining;
+        }
+
+        for (var occurrence = 0; occurrence < occurrenceCount; occurrence++)
+        {
+            var phaseSeconds = PositiveModulo(
+                elapsedInAnchorCycle +
+                (occurrence * anchorCycleSeconds),
+                profileCycleSeconds);
+            var cycleIndex = Math.Max(
+                0d,
+                Math.Round(
+                    (timeline - phaseSeconds) / profileCycleSeconds,
+                    MidpointRounding.AwayFromZero));
+            var effectiveTime = phaseSeconds +
+                (cycleIndex * profileCycleSeconds);
+
+            candidates.Add(new AnchorCandidate(
+                anchorIndex,
+                anchor.ActionId,
+                effectiveTime,
+                cooldown.IsReady));
+        }
+    }
+
+    private static AnchorCluster SelectBestCluster(
+        IReadOnlyList<AnchorCandidate> candidates,
+        double timeline)
+    {
+        return candidates
+            .Select(seed => BuildCluster(seed, candidates))
+            .OrderByDescending(cluster => cluster.Candidates.Count)
+            .ThenByDescending(cluster => cluster.Candidates.Any(candidate =>
+                candidate.AnchorIndex == 0))
+            .ThenBy(cluster => cluster.SpreadSeconds)
+            .ThenBy(cluster => Math.Abs(cluster.CentreSeconds - timeline))
+            .ThenBy(cluster => cluster.Candidates.Min(candidate =>
+                candidate.AnchorIndex))
+            .First();
+    }
+
+    private static AnchorCluster BuildCluster(
+        AnchorCandidate seed,
+        IReadOnlyList<AnchorCandidate> candidates)
+    {
+        var selected = candidates
+            .Where(candidate =>
+                Math.Abs(candidate.EffectiveTime - seed.EffectiveTime) <=
+                AnchorAgreementToleranceSeconds)
+            .GroupBy(candidate => candidate.ActionId)
+            .Select(group => group
+                .OrderBy(candidate =>
+                    Math.Abs(candidate.EffectiveTime - seed.EffectiveTime))
+                .ThenBy(candidate => candidate.AnchorIndex)
+                .First())
+            .ToArray();
+
+        return new AnchorCluster(selected);
     }
 
     private static bool TryGetProfile(
@@ -159,22 +303,29 @@ internal static class BurstTimelineProfileRegistry
                 level >= candidate.MinimumLevel &&
                 (!candidate.MaximumLevel.HasValue ||
                  level <= candidate.MaximumLevel.Value) &&
-                candidate.BurstAnchorActionIds.Count > 0)
+                candidate.ResolveAnchors().Count > 0)
             .OrderByDescending(candidate => candidate.MinimumLevel)
             .FirstOrDefault()!;
 
         return profile != null;
     }
 
-    private static double FindNearestCycleBoundary(
-        double timelineSeconds,
-        double cycleSeconds)
+    private static double Median(IEnumerable<double> values)
     {
-        return Math.Max(
-            0d,
-            Math.Round(
-                timelineSeconds / cycleSeconds,
-                MidpointRounding.AwayFromZero) * cycleSeconds);
+        var ordered = values.OrderBy(value => value).ToArray();
+        var middle = ordered.Length / 2;
+
+        return ordered.Length % 2 == 0
+            ? (ordered[middle - 1] + ordered[middle]) / 2d
+            : ordered[middle];
+    }
+
+    private static double PositiveModulo(double value, double modulus)
+    {
+        var result = value % modulus;
+        return result < 0d
+            ? result + modulus
+            : result;
     }
 
     private static IReadOnlyList<BurstTimelineProfileDefinition> LoadProfiles()
@@ -194,7 +345,7 @@ internal static class BurstTimelineProfileRegistry
             .Where(profile =>
                 !string.IsNullOrWhiteSpace(profile.PolicyId) &&
                 !string.IsNullOrWhiteSpace(profile.Job) &&
-                profile.BurstAnchorActionIds.Count > 0)
+                profile.ResolveAnchors().Count > 0)
             .ToArray() ??
             Array.Empty<BurstTimelineProfileDefinition>();
     }
@@ -220,5 +371,31 @@ internal static class BurstTimelineProfileRegistry
         };
 
         return candidates.FirstOrDefault(File.Exists);
+    }
+
+    private sealed record AnchorCandidate(
+        int AnchorIndex,
+        uint ActionId,
+        double EffectiveTime,
+        bool IsReady);
+
+    private sealed class AnchorCluster
+    {
+        public AnchorCluster(IReadOnlyList<AnchorCandidate> candidates)
+        {
+            Candidates = candidates;
+            CentreSeconds = Median(candidates.Select(candidate =>
+                candidate.EffectiveTime));
+            SpreadSeconds = candidates.Count <= 1
+                ? 0d
+                : candidates.Max(candidate => candidate.EffectiveTime) -
+                  candidates.Min(candidate => candidate.EffectiveTime);
+        }
+
+        public IReadOnlyList<AnchorCandidate> Candidates { get; }
+
+        public double CentreSeconds { get; }
+
+        public double SpreadSeconds { get; }
     }
 }
