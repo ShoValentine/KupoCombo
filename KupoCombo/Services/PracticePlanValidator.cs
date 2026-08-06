@@ -505,18 +505,17 @@ public sealed class PracticePlanValidator
                 issues);
         }
 
-        var cooldownAction = ResolveCooldownAction(
-            policy.Definition,
-            alias,
-            action);
-        var rechargeSeconds = cooldownAction.RecastSeconds;
-        var maximumCharges = Math.Max(1, cooldownAction.MaximumCharges);
+        // A transformed or proc follow-up is unlocked by state, not by spending
+        // another charge from the action named by AdjustedFrom. Its own recast
+        // describes whether it participates in cooldown scheduling.
+        var rechargeSeconds = action.RecastSeconds;
+        var maximumCharges = Math.Max(1, action.MaximumCharges);
 
         if (maximumCharges > 1 || rechargeSeconds > 5d)
         {
             usages.Add(
                 new ActionUsage(
-                    cooldownAction.ActionId,
+                    action.ActionId,
                     actionId,
                     startsAtSeconds,
                     rechargeSeconds,
@@ -633,17 +632,6 @@ public sealed class PracticePlanValidator
         }
 
         return null;
-    }
-
-    private static PolicyActionDefinition ResolveCooldownAction(
-        RulePolicyDefinition definition,
-        string alias,
-        PolicyActionDefinition action)
-    {
-        return !string.IsNullOrWhiteSpace(action.AdjustedFrom) &&
-               TryGetAction(definition, action.AdjustedFrom, out var baseAction)
-            ? baseAction
-            : action;
     }
 
     private static bool TryGetAction(
